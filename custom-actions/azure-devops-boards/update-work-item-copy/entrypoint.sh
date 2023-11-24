@@ -30,8 +30,8 @@ if [[ ${INPUT_PR_STATE} != '' ]]; then
 else
   # COMMENT="<div>Execute Approval Gate Check for Run ID: ${INPUT_RUN_ID}</div><div><br></div><div>{<span style="font-weight:normal\;"><span>&nbsp; </span>\n&quot;result_state&quot;: &quot;<b>${INPUT_RUN_RESULT_STATE}</b>&quot;,</span><span style="font-weight:normal\;"><span>&nbsp; </span>&quot;\nnotebook_path&quot;: &quot;<b>${INPUT_RUN_NOTEBOOK_PATH}</b>&quot;,</span><span style="font-weight:normal\;"><span>&nbsp; </span>&quot;\nrun_page_url&quot;: &quot;<b><a href="${INPUT_RUN_PAGE_URL}">${INPUT_RUN_PAGE_URL}</a></b>&quot;</span>}</div><div><br></div>"
   # COMMENT="<div><span style="color:rgba(0, 0, 0, 0.9)\;">Execute Approval Gate Check for Run ID: 70802930006636</span></div><div><span style="color:rgba(0, 0, 0, 0.9)\;"><br></span></div><div><p style="margin:0.0px 0.0px 0.0px 0.0px\;font:13.0px 'Helvetica Neue'\;">{</p><p style="margin:0px\;font-style:normal\;font-size:13px\;line-height:normal\;"><span style="font-weight:normal\;"><span>&nbsp; </span>&quot;result_state&quot;: &quot;<b>SUCCESS</b>&quot;,</span></p><p style="margin:0px\;font-style:normal\;font-size:13px\;line-height:normal\;"><span style="font-weight:normal\;"><span>&nbsp; </span>&quot;notebook_path&quot;: &quot;</span><b>/test/mdp/unit/ingestion_area1/1.summary_passed</b>&quot;,</p><p style="margin:0px\;font-style:normal\;font-size:13px\;line-height:normal\;"><span style="font-weight:normal\;"><span>&nbsp; </span>&quot;run_page_url&quot;: &quot;</span><b><a href=\"https://adb-5730376679189321.1.azuredatabricks.net/?o=5730376679189321#job/47563390805699/run/70802930006636\">https://adb-5730376679189321.1.azuredatabricks.net/?o=5730376679189321#job/47563390805699/run/70802930006636</a></b>&quot;</p><p style="margin:0.0px 0.0px 0.0px 0.0px\;font:13.0px 'Helvetica Neue'\;">}</p><br></div>"
-  COMMENT="<div><span style=\"color:rgba(0, 0, 0, 0.9);\">Execute Approval Gate Check for Run ID: 70802930006636</span></div><div><span style=\"color:rgba(0, 0, 0, 0.9);\"><br></span></div><div><p style=\"margin:0.0px 0.0px 0.0px 0.0px;font:13.0px 'Helvetica Neue';\">{</p><p style=\"margin:0px;font-style:normal;font-size:13px;line-height:normal;\"><span style=\"font-weight:normal;\"><span>&nbsp; </span>&quot;result_state&quot;: &quot;<b>SUCCESS</b>&quot;,</span></p><p style=\"margin:0px;font-style:normal;font-size:13px;line-height:normal;\"><span style=\"font-weight:normal;\"><span>&nbsp; </span>&quot;notebook_path&quot;: &quot;</span><b>/test/mdp/unit/ingestion_area1/1.summary_passed</b>&quot;,</p><p style=\"margin:0px;font-style:normal;font-size:13px;line-height:normal;\"><span style=\"font-weight:normal;\"><span>&nbsp; </span>&quot;run_page_url&quot;: &quot;</span><b><a href=\\\"https://adb-5730376679189321.1.azuredatabricks.net/?o=5730376679189321#job/47563390805699/run/70802930006636\\\">https://adb-5730376679189321.1.azuredatabricks.net/?o=5730376679189321#job/47563390805699/run/70802930006636</a></b>&quot;</p><p style=\"margin:0.0px 0.0px 0.0px 0.0px;font:13.0px 'Helvetica Neue';\">}</p><br></div>"
-
+  # COMMENT="<div><span style=\"color:rgba(0, 0, 0, 0.9);\">Execute Approval Gate Check for Run ID: 70802930006636</span></div><div><span style=\"color:rgba(0, 0, 0, 0.9);\"><br></span></div><div><p style=\"margin:0.0px 0.0px 0.0px 0.0px;font:13.0px 'Helvetica Neue';\">{</p><p style=\"margin:0px;font-style:normal;font-size:13px;line-height:normal;\"><span style=\"font-weight:normal;\"><span>&nbsp; </span>&quot;result_state&quot;: &quot;<b>SUCCESS</b>&quot;,</span></p><p style=\"margin:0px;font-style:normal;font-size:13px;line-height:normal;\"><span style=\"font-weight:normal;\"><span>&nbsp; </span>&quot;notebook_path&quot;: &quot;</span><b>/test/mdp/unit/ingestion_area1/1.summary_passed</b>&quot;,</p><p style=\"margin:0px;font-style:normal;font-size:13px;line-height:normal;\"><span style=\"font-weight:normal;\"><span>&nbsp; </span>&quot;run_page_url&quot;: &quot;</span><b><a href=\\\"https://adb-5730376679189321.1.azuredatabricks.net/?o=5730376679189321#job/47563390805699/run/70802930006636\\\">https://adb-5730376679189321.1.azuredatabricks.net/?o=5730376679189321#job/47563390805699/run/70802930006636</a></b>&quot;</p><p style=\"margin:0.0px 0.0px 0.0px 0.0px;font:13.0px 'Helvetica Neue';\">}</p><br></div>"
+  COMMENT="<div>Execute Approval Gate Check for Run ID: 70802930006636</div><div>{\"result_state\": \"<b>SUCCESS</b>\", \"notebook_path\": \"<b>/test/mdp/unit/ingestion_area1/1.summary_passed</b>\", \"run_page_url\": \"<b><a href=\\\"https://adb-5730376679189321.1.azuredatabricks.net/?o=5730376679189321#job/47563390805699/run/70802930006636\\\">https://adb-5730376679189321.1.azuredatabricks.net/?o=5730376679189321#job/47563390805699/run/70802930006636</a></b>\", }</div>"
 fi
 
 
@@ -49,20 +49,20 @@ API_RESPONSE=$(curl -v -X "PATCH" "${API_PATCH_URL}" \
 -u "__token__:${INPUT_TOKEN}" \
 -d "[
   {
-    \"op\": \"add\",
-    \"path\": \"/fields/System.State\",
-    \"value\": \"${STATE}\"
+    'op': 'add',
+    'path': '/fields/System.State',
+    'value': '${STATE}'
   },
   {
-    \"op\": \"replace\",
-    \"path\": \"/fields/WEF_3C5EBBCC56D24168AAEFD5886887382F_Kanban.Column\",
-    \"value\": \"${INPUT_BOARD_COLUMN}\"
+    'op': 'replace',
+    'path': '/fields/WEF_3C5EBBCC56D24168AAEFD5886887382F_Kanban.Column',
+    'value': '${INPUT_BOARD_COLUMN}'
   },
   {
-    \"op\": \"add\",
-    \"path\": \"/fields/System.History\",
-    \"from\": null,
-    \"value\": \"${COMMENT}\"
+    'op': 'add',
+    'path': '/fields/System.History',
+    'from': null,
+    'value': \"${COMMENT}\"
   }
 ]")
 
