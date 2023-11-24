@@ -108,4 +108,4 @@ jobs:
           pr_merged_at: ${{ github.event.pull_request.merged_at }}
           work_item_id: ${{ needs.bump_release_version.outputs.work_item_id }}
           board_column: 'PR - Merged'
-          token: ${{ secrets.AZURE_DEVOPS_PAT }}
+          token: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO ${{ secrets.AZURE_DEVOPS_TOKEN }}

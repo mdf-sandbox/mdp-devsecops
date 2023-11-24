@@ -70,12 +70,12 @@ jobs:
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.AZURE_DEVOPS_PAT }}
-          TWINE_REPOSITORY_URL: https://pkgs.dev.azure.com/kBank-MDF-SANDBOX/_packaging/kBank-MDF-SANDBOX/pypi/upload
+          TWINE_REPOSITORY_URL: https://pkgs.dev.azure.com/kBank-MDF-SANDBOX/_packaging/kBank-MDF-SANDBOX/pypi/upload #TODO: ${{ secrets.AZURE_DEVOPS_ARTIFACT_UPLOAD_URL }}
 
       - name: Setup global Git configs
         run: |
-          git config --global user.name "DevSecOps"
-          git config --global user.email "DevSecOps@users.noreply.github.com"
+          git config --global user.name "DevSecOps" #TODO: ${{ vars.DEVSECOPS_GITUSERNAME_VAR }}
+          git config --global user.email "DevSecOps@users.noreply.github.com" #TODO: ${{ vars.DEVSECOPS_GITEMAIL_VAR }}
 
       - name: Initial pre-release version on release branch
         if: ${{ inputs.ref == 'main' }}
@@ -103,4 +103,4 @@ jobs:
           package_name: ${{ env.PACKAGE_NAME }}
           package_version: ${{ env.PRERELEASE_VERSION }}
           feed_view: DEV
-          token: ${{ secrets.AZURE_DEVOPS_PAT }}
+          token: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO ${{ secrets.GITHUB_MDP_DEVSECOPS_TOKEN }}

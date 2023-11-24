@@ -69,7 +69,7 @@ jobs:
           poetry run twine upload dist/*
         env:
           TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.AZURE_DEVOPS_PAT }}
+          TWINE_PASSWORD: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO ${{ secrets.AZURE_DEVOPS_TOKEN }}
           TWINE_REPOSITORY_URL: https://pkgs.dev.azure.com/kBank-MDF-SANDBOX/_packaging/kBank-MDF-SANDBOX/pypi/upload
 
       - name: Add Azure Boards environment variables
@@ -111,7 +111,7 @@ jobs:
           package_name: ${{ env.PACKAGE_NAME }}
           package_version: ${{ env.RELEASE_VERSION }}
           feed_view: "DEV"
-          token: ${{ secrets.AZURE_DEVOPS_PAT }}
+          token: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO ${{ secrets.AZURE_DEVOPS_TOKEN }}
 
       - name: Promote package to all feed views
         if: ${{ startsWith(inputs.ref, 'hotfix/') }}
@@ -120,7 +120,7 @@ jobs:
           package_name: ${{ env.PACKAGE_NAME }}
           package_version: ${{ env.RELEASE_VERSION }}
           feed_view: "[DEV, SIT, UAT, PRD]"
-          token: ${{ secrets.AZURE_DEVOPS_PAT }}
+          token: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO ${{ secrets.AZURE_DEVOPS_TOKEN }}
 
       - name: Set job outputs
         id: op1
@@ -149,4 +149,4 @@ jobs:
           pr_merged_at: ${{ github.event.pull_request.merged_at }}
           work_item_id: ${{ needs.build-release-package.outputs.work_item_id }}
           board_column: 'PR - Merged'
-          token: ${{ secrets.AZURE_DEVOPS_PAT }}
+          token: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO ${{ secrets.AZURE_DEVOPS_TOKEN }}

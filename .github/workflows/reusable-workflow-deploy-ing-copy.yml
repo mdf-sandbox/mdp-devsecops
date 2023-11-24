@@ -120,15 +120,12 @@ jobs:
         if: ${{ inputs.run_id != '' }}
         run: |
           echo ${{ secrets.AZURE_DATABRICKS_PAT }} | \
-            databricks configure --profile ar-frmwk --host ${{ env.DATABRICKS_HOST }} --token
+            databricks configure --profile ar-frmwk --host ${{ env.DATABRICKS_HOST }} --token #TODO: ${{ vars.DATABRICKS_PROFILE }}
 
       - name: Get metadata from Databricks workflow Run ID
         if: ${{ inputs.run_id != '' }}
         run: |
-          # databricks --profile ar-frmwk runs get --run-id ${{ inputs.run_id }} | jq '{result_state: .state.result_state, notebook_path: .overriding_parameters.notebook_params.notebook_path, run_page_url: .run_page_url}' > run_metadata.json
-          # databricks --profile ar-frmwk jobs get-run ${{ inputs.run_id }} | jq '{result_state: .state.result_state, notebook_path: .job_parameters.[] | select(.name=="notebook_path") | .value, run_page_url: .run_page_url}' > run_metadata.json
-          databricks --profile ar-frmwk jobs get-run ${{ inputs.run_id }} | jq '{result_state: .state.result_state, notebook_path: (.job_parameters[] | select(.name=="notebook_path").value), run_page_url: .run_page_url}' > run_metadata.json
-          #databricks --profile ar-frmwk jobs get-run ${{ inputs.run_id }} | jq '{result_state: .state.result_state, notebook_path: .job_parameters | map(.value)[1], run_page_url: .run_page_url}' > run_metadata.json
+          databricks --profile ar-frmwk jobs get-run ${{ inputs.run_id }} | jq '{result_state: .state.result_state, notebook_path: (.job_parameters[] | select(.name=="notebook_path").value), run_page_url: .run_page_url}' > run_metadata.json #TODO: ${{ vars.DATABRICKS_PROFILE }}
           cat run_metadata.json
 
       - name: Set outputs from metadata
@@ -177,7 +174,7 @@ jobs:
           environment: ${{ inputs.environment }}
           work_item_id: "71" #temporary
           board_column: '${{ inputs.environment }} Deployment'
-          token: ${{ secrets.AZURE_DEVOPS_PAT }}
+          token: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO ${{ secrets.AZURE_DEVOPS_TOKEN }}
           run_id: ${{ inputs.run_id }}
           run_result_state: ${{ needs.check-approval-gate.outputs.run_result_state }}
           run_notebook_path: ${{ needs.check-approval-gate.outputs.run_notebook_path }}

@@ -120,7 +120,7 @@ jobs:
           pr_created_by: ${{ github.event.pull_request.user.login }}
           pr_created_at: ${{ github.event.pull_request.created_at }}
           package_name: ${{ needs.prebuild.outputs.package_name }}
-          token: ${{ secrets.AZURE_DEVOPS_PAT }}
+          token: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO ${{ secrets.AZURE_DEVOPS_TOKEN }}
 
       - name: Update Pull request title
         uses: ./custom-actions/github/update-pr-title

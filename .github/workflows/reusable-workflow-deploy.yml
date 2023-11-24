@@ -106,12 +106,12 @@ jobs:
         if: ${{ inputs.run_id != '' }}
         run: |
           echo ${{ secrets.AZURE_DATABRICKS_PAT }} | \
-            databricks configure --profile ar-frmwk --host ${{ env.DATABRICKS_HOST }} --jobs-api-version ${{ env.DATABRICKS_JOBS_API_VERSION }} --token
+            databricks configure --profile ar-frmwk --host ${{ env.DATABRICKS_HOST }} --jobs-api-version ${{ env.DATABRICKS_JOBS_API_VERSION }} --token #TODO: ${{ vars.DATABRICKS_PROFILE }}
 
       - name: Get metadata from Databricks workflow Run ID
         if: ${{ inputs.run_id != '' }}
         run: |
-          databricks --profile ar-frmwk runs get --run-id ${{ inputs.run_id }} | jq '{result_state: .state.result_state, notebook_path: .overriding_parameters.notebook_params.notebook_path, run_page_url: .run_page_url}' > run_metadata.json
+          databricks --profile ar-frmwk runs get --run-id ${{ inputs.run_id }} | jq '{result_state: .state.result_state, notebook_path: .overriding_parameters.notebook_params.notebook_path, run_page_url: .run_page_url}' > run_metadata.json #TODO: ${{ vars.DATABRICKS_PROFILE }}
           cat run_metadata.json
 
       - name: Set environment variables from metadata
@@ -142,7 +142,7 @@ jobs:
           repository: ${{ inputs.repository }}
           ref: ${{ inputs.ref }}
           fetch-depth: 0
-          token: ${{ secrets.GHE_DEVOPS_TOKEN }}
+          token: ${{ secrets.GHE_DEVOPS_TOKEN }} #TODO ${{ secrets.GITHUB_MDP_DEVSECOPS_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -172,7 +172,7 @@ jobs:
           package_name: ${{ env.PACKAGE_NAME }}
           package_version: ${{ env.CURRENT_VERSION }}
           feed_view: ${{ inputs.environment }}
-          token: ${{ secrets.AZURE_DEVOPS_PAT }}
+          token: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO ${{ secrets.AZURE_DEVOPS_TOKEN }}
 
   deploy:
     name: Deploy to ${{ inputs.environment }} environment
@@ -199,7 +199,7 @@ jobs:
           repository: ${{ inputs.repository }}
           ref: ${{ inputs.ref }}
           fetch-depth: 0
-          token: ${{ secrets.GHE_DEVOPS_TOKEN }}
+          token: ${{ secrets.GHE_DEVOPS_TOKEN }} #TODO ${{ secrets.GITHUB_MDP_DEVSECOPS_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -229,9 +229,9 @@ jobs:
       - name: Connect to Databricks with Frmwk profiles
         run: |
           echo ${{ secrets.AZURE_DATABRICKS_PAT }} | \
-            databricks configure --profile ar-frmwk --host ${{ env.DATABRICKS_HOST }} --token
+            databricks configure --profile ar-frmwk --host ${{ env.DATABRICKS_HOST }} --token #TODO: ${{ vars.DATABRICKS_PROFILE }}
 
-      - name: Deploy deployment approval gate components to Databricks
+      - name: Deploy deployment approval gate components to Databricks #TODO: ${{ vars.DATABRICKS_PROFILE }}
         if: ${{ contains(fromJson('["sit", "uat"]'), inputs.environment) }}
         run: |
           # Copy files to Databricks Workspace
@@ -280,4 +280,4 @@ jobs:
           environment: ${{ inputs.environment }}
           work_item_id: ${{ needs.deploy.outputs.work_item_id }}
           board_column: '${{ inputs.environment }} Deployment'
-          token: ${{ secrets.AZURE_DEVOPS_PAT }}
+          token: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO ${{ secrets.AZURE_DEVOPS_TOKEN }}

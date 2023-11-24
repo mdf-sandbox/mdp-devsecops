@@ -34,15 +34,15 @@ jobs:
         run: |
           cat ./dotenv/dev.env >> $GITHUB_ENV
 
-      - name: Install Databricks-CLI
+      - name: Install Databricks CLI
         run: |
-          pip install databricks-cli
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
 
       - name: Connect to Databricks with Frmwk profiles
         run: |
           echo ${{ secrets.AZURE_DATABRICKS_PAT }} | \
-            databricks configure --profile ar-frmwk --host ${{ env.DATABRICKS_HOST }} --jobs-api-version ${{ env.DATABRICKS_JOBS_API_VERSION }} --token
+            databricks configure --profile ar-frmwk --host ${{ env.DATABRICKS_HOST }} --token #TODO: ${{ vars.DATABRICKS_PROFILE }}
 
       - name: Update the repo to the latest commit on ${{ inputs.ref }} branch
         run: |
-          databricks --profile ar-frmwk repos update --path /Repos/${{ inputs.repository }} --branch ${{ inputs.ref }}
+          databricks --profile ar-frmwk repos update --path /Repos/${{ inputs.repository }} --branch ${{ inputs.ref }} #TODO: ${{ vars.DATABRICKS_PROFILE }} #TODO: ${{ vars.DATABRICKS_PROFILE }}
