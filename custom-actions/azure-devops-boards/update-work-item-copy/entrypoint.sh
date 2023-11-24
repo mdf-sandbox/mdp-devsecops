@@ -29,7 +29,7 @@ if [[ ${INPUT_PR_STATE} != '' ]]; then
   COMMENT="${INPUT_PR_MERGED_BY} merged this pull request at ${INPUT_PR_MERGED_AT}"
 else
     COMMENT="<div>Execute Approval Gate Check for Run ID: ${INPUT_RUN_ID}</div>
-<div><font size="12px">{<br>
+<div><font size="12">{<br>
   \"result_state\": \"<b>${INPUT_RUN_RESULT_STATE}</b>\",<br>
   \"notebook_path\": \"<b>${INPUT_RUN_NOTEBOOK_PATH}</b>\",<br>
   \"run_page_url\": \"<b><a href=\\\"${INPUT_RUN_PAGE_URL}\\\">${INPUT_RUN_PAGE_URL}</a></b>\"<br>
