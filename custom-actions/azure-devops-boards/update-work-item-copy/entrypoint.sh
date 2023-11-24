@@ -49,20 +49,20 @@ API_RESPONSE=$(curl -v -X "PATCH" "${API_PATCH_URL}" \
 -u "__token__:${INPUT_TOKEN}" \
 -d "[
   {
-    'op': 'add',
-    'path': '/fields/System.State',
-    'value': '${STATE}'
+    \"op\": \"add\",
+    \"path\": \"/fields/System.State\",
+    \"value\": \"${STATE}\"
   },
   {
-    'op': 'replace',
-    'path': '/fields/WEF_3C5EBBCC56D24168AAEFD5886887382F_Kanban.Column',
-    'value': '${INPUT_BOARD_COLUMN}'
+    \"op\": \"replace\",
+    \"path\": \"/fields/WEF_3C5EBBCC56D24168AAEFD5886887382F_Kanban.Column\",
+    \"value\": \"${INPUT_BOARD_COLUMN}\"
   },
   {
-    'op': 'add',
-    'path': '/fields/System.History',
-    'from': null,
-    'value': \"${COMMENT}\"
+    \"op\": \"add\",
+    \"path\": \"/fields/System.History\",
+    \"from\": null,
+    \"value\": \"${COMMENT}\"
   }
 ]")
 
