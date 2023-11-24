@@ -62,7 +62,7 @@ API_RESPONSE=$(curl -v -X "PATCH" "${API_PATCH_URL}" \
     'op': 'add',
     'path': '/fields/System.History',
     'from': null,
-    'value': \"${COMMENT}\"
+    'value': '${COMMENT}'
   }
 ]")
 
