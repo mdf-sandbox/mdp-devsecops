@@ -13,18 +13,6 @@ echo ${INPUT_RUN_RESULT_STATE}
 echo ${INPUT_RUN_NOTEBOOK_PATH}
 echo ${INPUT_RUN_PAGE_URL}
 
-# if [[ ${INPUT_PR_STATE} != '' ]]; then
-#   COMMENT="${INPUT_PR_MERGED_BY} merged this pull request at ${INPUT_PR_MERGED_AT}"
-# else
-#   COMMENT="ahongtrakulchai deployed the package from this pull request to ${INPUT_ENVIRONMENT} environment."
-# fi
-
-# COMMENT="Execute Approval Gate Check for Run ID: ${INPUT_RUN_ID}
-# {
-#   "result_state": "${INPUT_RUN_RESULT_STATE}",
-#   "notebook_path": "${INPUT_RUN_NOTEBOOK_PATH}",
-#   "run_page_url": "${INPUT_RUN_PAGE_URL}"
-# }"
 if [[ ${INPUT_PR_STATE} != '' ]]; then
   COMMENT="${INPUT_PR_MERGED_BY} merged this pull request at ${INPUT_PR_MERGED_AT}"
 else

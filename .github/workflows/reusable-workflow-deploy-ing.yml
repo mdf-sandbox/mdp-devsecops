@@ -69,7 +69,10 @@ jobs:
     runs-on: ubuntu-20.04
     outputs:
       pre_approve_status: ${{ steps.op1.outputs.pre_approve_status }}
-      post_approve_status: ${{ steps.op2.outputs.post_approve_status }}
+      post_approve_status: ${{ steps.op3.outputs.post_approve_status }}
+      run_result_state: ${{ steps.op2.outputs.RUN_RESULT_STATE }}
+      run_notebook_path: ${{ steps.op2.outputs.RUN_NOTEBOOK_PATH }}
+      run_page_url: ${{ steps.op2.outputs.RUN_PAGE_URL }}
 
     steps:
       - name: Set default approval status
@@ -126,17 +129,18 @@ jobs:
           cat run_metadata.json
 
       - name: Set environment variables from metadata
+        id: op2
         if: ${{ inputs.run_id != '' }}
         run: |
-          echo "RUN_RESULT_STATE=$(jq -r '.result_state' run_metadata.json)" >> $GITHUB_ENV
-          echo "RUN_NOTEBOOK_PATH=$(jq -r '.notebook_path' run_metadata.json)" >> $GITHUB_ENV
-          echo "RUN_PAGE_URL=$(jq -r '.run_page_url' run_metadata.json)" >> $GITHUB_ENV
+          echo "RUN_RESULT_STATE=$(jq -r '.result_state' run_metadata.json)" >> $GITHUB_OUTPUT
+          echo "RUN_NOTEBOOK_PATH=$(jq -r '.notebook_path' run_metadata.json)" >> $GITHUB_OUTPUT
+          echo "RUN_PAGE_URL=$(jq -r '.run_page_url' run_metadata.json)" >> $GITHUB_OUTPUT
 
       - name: Pending Approval
-        id: op2
-        if: ${{ (inputs.run_id != '') && ((!startsWith(env.RUN_NOTEBOOK_PATH, env.APPROVAL_GATE_PATH)) || (env.RUN_RESULT_STATE != 'SUCCESS')) }}
+        id: op3
+        if: ${{ (inputs.run_id != '') && (!startsWith(steps.op2.outputs.RUN_NOTEBOOK_PATH, env.APPROVAL_GATE_PATH) || (steps.op2.outputs.RUN_RESULT_STATE != 'SUCCESS')) }}
         run: |
-          echo "::error::Please check the result of workflow run id '${{ inputs.run_id }}' from this url '${{ env.RUN_PAGE_URL }}'"
+          echo "::error::Please check the result of workflow run id '${{ inputs.run_id }}' from this url '${{ steps.op2.outputs.RUN_PAGE_URL }}'"
           echo "post_approve_status=pending" >> $GITHUB_OUTPUT
           exit 1
 
@@ -403,9 +407,13 @@ jobs:
           fetch-depth: 0
 
       - name: Update a work item on Azure Boards
-        uses: ./custom-actions/azure-devops-boards/update-work-item
+        uses: ./custom-actions/azure-devops-boards/update-work-item-copy
         with:
           environment: ${{ inputs.environment }}
           work_item_id: ${{ needs.deploy-databricks-bundle.outputs.work_item_id }}
           board_column: '${{ inputs.environment }} Deployment'
           token: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO ${{ secrets.AZURE_DEVOPS_TOKEN }}
+          run_id: ${{ inputs.run_id }}
+          run_result_state: ${{ needs.check-approval-gate.outputs.run_result_state }}
+          run_notebook_path: ${{ needs.check-approval-gate.outputs.run_notebook_path }}
+          run_page_url: ${{ needs.check-approval-gate.outputs.run_page_url }}
