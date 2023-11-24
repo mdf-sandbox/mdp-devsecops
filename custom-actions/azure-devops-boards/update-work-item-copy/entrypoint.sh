@@ -25,8 +25,16 @@ echo ${INPUT_RUN_PAGE_URL}
 #   "notebook_path": "${INPUT_RUN_NOTEBOOK_PATH}",
 #   "run_page_url": "${INPUT_RUN_PAGE_URL}"
 # }"
+if [[ ${INPUT_PR_STATE} != '' ]]; then
+  COMMENT="${INPUT_PR_MERGED_BY} merged this pull request at ${INPUT_PR_MERGED_AT}"
+else
+  if [[ ${INPUT_PR_STATE} != '' ]]; then
+    COMMENT="<div>Execute Approval Gate Check for Run ID: ${INPUT_RUN_ID}</div><div><br></div><div>{<span style="font-weight:normal\;"><span>&nbsp; </span>&quot;result_state&quot;: &quot;<b>${INPUT_RUN_RESULT_STATE}</b>&quot;,</span><span style="font-weight:normal\;"><span>&nbsp; </span>&quot;notebook_path&quot;: &quot;<b>${INPUT_RUN_NOTEBOOK_PATH}</b>&quot;,</span><span style="font-weight:normal\;"><span>&nbsp; </span>&quot;run_page_url&quot;: &quot;<b><a href="${INPUT_RUN_PAGE_URL}">${INPUT_RUN_PAGE_URL}</a></b>&quot;</span>}</div><div><br></div><div>ahongtrakulchai deployed the package from this pull request to ${INPUT_ENVIRONMENT} environment.</div>"
+  else
+    COMMENT="<div><br></div><div>ahongtrakulchai deployed the package from this pull request to ${INPUT_ENVIRONMENT} environment.</div>"
+  fi
+fi
 
-COMMENT="<div>Execute Approval Gate Check for Run ID: ${INPUT_RUN_ID}</div><div><br></div><div>{<span style="font-weight:normal\;"><span>&nbsp; </span>&quot;result_state&quot;: &quot;<b>${INPUT_RUN_RESULT_STATE}</b>&quot;,</span><span style="font-weight:normal\;"><span>&nbsp; </span>&quot;notebook_path&quot;: &quot;<b>${INPUT_RUN_NOTEBOOK_PATH}</b>&quot;,</span><span style="font-weight:normal\;"><span>&nbsp; </span>&quot;run_page_url&quot;: &quot;<b><a href="${INPUT_RUN_PAGE_URL}">${INPUT_RUN_PAGE_URL}</a></b>&quot;</span>}</div>"
 
 if [[ ${INPUT_ENVIRONMENT} != 'PRD' ]]; then
   STATE="Doing"
