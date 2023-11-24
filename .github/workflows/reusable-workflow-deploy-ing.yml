@@ -230,16 +230,16 @@ jobs:
       - name: Delete files from the destination
         run: |
           for path in $(echo '${{ env.WORKSPACE_PATH }}' | jq -c '.[]'); do
-              SOURCE_PATH=$(echo "$path" | jq -r '.key')
-              DEST_PATH=$(echo "$path" | jq -r '.value')
-              echo "Creating directory in workspace path ${DEST_PATH}..."
-              databricks --profile ar-frmwk workspace mkdirs ${DEST_PATH} #TODO: ${{ vars.DATABRICKS_PROFILE }}
-              echo "Listing files in workspace path ${DEST_PATH}..."
-              databricks --profile ar-frmwk workspace list ${DEST_PATH} #TODO: ${{ vars.DATABRICKS_PROFILE }}
-              if [[ ${SOURCE_PATH} != *"_test" ]]; then
-                echo "Deleting files in workspace path ${DEST_PATH}..."
-                databricks --profile ar-frmwk workspace delete ${DEST_PATH} --recursive #TODO: ${{ vars.DATABRICKS_PROFILE }}
-              fi
+            SOURCE_PATH=$(echo "$path" | jq -r '.key')
+            DEST_PATH=$(echo "$path" | jq -r '.value')
+            echo "Creating directory in workspace path ${DEST_PATH}..."
+            databricks --profile ar-frmwk workspace mkdirs ${DEST_PATH} #TODO: ${{ vars.DATABRICKS_PROFILE }}
+            echo "Listing files in workspace path ${DEST_PATH}..."
+            databricks --profile ar-frmwk workspace list ${DEST_PATH} #TODO: ${{ vars.DATABRICKS_PROFILE }}
+            if [[ ${SOURCE_PATH} != *"_test" ]]; then
+              echo "Deleting files in workspace path ${DEST_PATH}..."
+              databricks --profile ar-frmwk workspace delete ${DEST_PATH} --recursive #TODO: ${{ vars.DATABRICKS_PROFILE }}
+            fi
           done
 
       - name: Validate the bundle configuration files
@@ -308,11 +308,11 @@ jobs:
       - name: Deploy Files to Databricks Volumes
         run: |
           for path in $(echo '${{ env.ADLS_ARTIFACT_PATH }}' | jq -c '.[]'); do
-              SOURCE_PATH=$(echo "$path" | jq -r '.key')
-              DEST_PATH=$(echo "$path" | jq -r '.value')
-              echo "Deploying files to artifact path ${DEST_PATH}..."
-              azcopy sync ".${DEST_PATH}" "https://pocadlsmdf.dfs.core.windows.net/artifact/mdf/ingestion/test_deployment${DEST_PATH}" --exclude-pattern=.gitkeep --delete-destination=true
-              # azcopy sync ".${DEST_PATH}" "https://adlsmdfseatestfw001.dfs.core.windows.net/artifact${DEST_PATH}" --exclude-pattern=.gitkeep --delete-destination=true
+            SOURCE_PATH=$(echo "$path" | jq -r '.key')
+            DEST_PATH=$(echo "$path" | jq -r '.value')
+            echo "Deploying files to artifact path ${DEST_PATH}..."
+            azcopy sync ".${DEST_PATH}" "https://pocadlsmdf.dfs.core.windows.net/artifact/mdf/ingestion/test_deployment${DEST_PATH}" --exclude-pattern=.gitkeep --delete-destination=true
+            # azcopy sync ".${DEST_PATH}" "https://adlsmdfseatestfw001.dfs.core.windows.net/artifact${DEST_PATH}" --exclude-pattern=.gitkeep --delete-destination=true
           done
 
   execute-post-deployment-script:
