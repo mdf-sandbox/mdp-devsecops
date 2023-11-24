@@ -78,8 +78,8 @@ jobs:
 
       - name: Setup global Git configs
         run: |
-          git config --global user.name "DevOps" #TODO: ${{ vars.GITHUB_DEVOPS_USERNAME_VAR }}
-          git config --global user.email "DevOps@users.noreply.github.com" #TODO: ${{ vars.GITHUB_DEVOPS_EMAIL_VAR }}
+          git config --global user.name "DevOps" #TODO: ${{ vars.GHE_DEVOPS_USERNAME_VAR }}
+          git config --global user.email "DevOps@users.noreply.github.com" #TODO: ${{ vars.GHE_DEVOPS_EMAIL_VAR }}
 
       - name: Release version v${{ env.RELEASE_VERSION }} on main branch
         if: ${{ startsWith(inputs.ref, 'release/') }}
@@ -100,7 +100,7 @@ jobs:
       - name: Checkout main branch of DevSecOps repository
         uses: actions/checkout@v4
         with:
-          repository: ${{ vars.GITHUB_DEVOPS_REPOSITORY_VAR }}
+          repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
           ref: main
           fetch-depth: 0
 
@@ -137,7 +137,7 @@ jobs:
       - name: Checkout main branch of DevSecOps repository
         uses: actions/checkout@v4
         with:
-          repository: ${{ vars.GITHUB_DEVOPS_REPOSITORY_VAR }}
+          repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
           ref: main
           fetch-depth: 0
 
@@ -149,4 +149,4 @@ jobs:
           pr_merged_at: ${{ github.event.pull_request.merged_at }}
           work_item_id: ${{ needs.build-release-package.outputs.work_item_id }}
           board_column: 'PR - Merged'
-          token: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO ${{ secrets.AZURE_DEVOPS_TOKE
+          token: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO ${{ secrets.AZURE_DEVOPS_TOKEN }}

@@ -101,7 +101,7 @@ jobs:
       - name: Checkout main branch of DevSecOps repository
         uses: actions/checkout@v4
         with:
-          repository: ${{ vars.GITHUB_DEVOPS_REPOSITORY_VAR }}
+          repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
           ref: main
           fetch-depth: 0
 
