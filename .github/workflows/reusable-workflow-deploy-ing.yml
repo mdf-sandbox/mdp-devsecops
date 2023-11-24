@@ -68,18 +68,18 @@ jobs:
     name: Check Approval Gate
     runs-on: ubuntu-20.04
     outputs:
-      pre_approve_status: ${{ steps.op1.outputs.pre_approve_status }}
+      # pre_approve_status: ${{ steps.op1.outputs.pre_approve_status }}
       post_approve_status: ${{ steps.op3.outputs.post_approve_status }}
       run_result_state: ${{ steps.op2.outputs.RUN_RESULT_STATE }}
       run_notebook_path: ${{ steps.op2.outputs.RUN_NOTEBOOK_PATH }}
       run_page_url: ${{ steps.op2.outputs.RUN_PAGE_URL }}
 
     steps:
-      - name: Set default approval status
-        if: always()
-        id: op1
-        run: |
-          echo "pre_approve_status=approved" >> $GITHUB_OUTPUT
+      # - name: Set default approval status
+      #   if: always()
+      #   id: op1
+      #   run: |
+      #     echo "pre_approve_status=approved" >> $GITHUB_OUTPUT
 
       - name: Checkout main branch of DevOps repository
         if: ${{ inputs.run_id != '' }}
