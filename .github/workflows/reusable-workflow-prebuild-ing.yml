@@ -26,7 +26,7 @@ jobs:
         package_name: ${{ steps.op1.outputs.package_name }}
     steps:
       - name: Checkout ${{ inputs.ref }} branch of ${{ inputs.repository }} repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repository }}
           ref: ${{ inputs.ref }}
@@ -71,10 +71,10 @@ jobs:
     if: ${{ (startsWith(inputs.ref, 'release/')) || startsWith(inputs.ref, 'hotfix/') }}
 
     steps:
-      - name: Checkout main branch of DevOps repository
-        uses: actions/checkout@v3
+      - name: Checkout main branch of DevSecOps repository
+        uses: actions/checkout@v4
         with:
-          repository: mdf-sandbox/sample-devops
+          repository: ${{ vars.DEVSECOPS_REPOSITORY_VAR }}
           ref: main
           fetch-depth: 0
 

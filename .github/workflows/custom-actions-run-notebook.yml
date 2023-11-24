@@ -29,11 +29,11 @@ jobs:
         post_deployment_script: ${{ fromJSON(inputs.post_deployment_script) }}
 
     steps:
-      - name: Checkout main branch of DevOps repository
+      - name: Checkout main branch of DevSecOps repository
         if: ${{ inputs.post_deployment_script != '["skip"]' }}
         uses: actions/checkout@v4
         with:
-          repository: mdf-sandbox/sample-devops
+          repository: ${{ vars.DEVSECOPS_REPOSITORY_VAR }}
           ref: main
           fetch-depth: 0
 

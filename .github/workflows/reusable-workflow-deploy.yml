@@ -62,11 +62,11 @@ jobs:
         run: |
           echo "pre_approve_status=approved" >> $GITHUB_OUTPUT
 
-      - name: Checkout main branch of DevOps repository
+      - name: Checkout main branch of DevSecOps repository
         if: ${{ inputs.run_id != '' }}
         uses: actions/checkout@v4
         with:
-          repository: mdf-sandbox/sample-devops
+          repository: ${{ vars.DEVSECOPS_REPOSITORY_VAR }}
           ref: main
           fetch-depth: 0
 
@@ -159,10 +159,10 @@ jobs:
           echo "PACKAGE_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
           echo "CURRENT_VERSION=$(poetry version --dry-run -s)" >> $GITHUB_ENV
 
-      - name: Checkout main branch of DevOps repository
+      - name: Checkout main branch of DevSecOps repository
         uses: actions/checkout@v4
         with:
-          repository: mdf-sandbox/sample-devops
+          repository: ${{ vars.DEVSECOPS_REPOSITORY_VAR }}
           ref: main
           fetch-depth: 0
 
@@ -182,10 +182,10 @@ jobs:
       work_item_id: ${{ steps.op1.outputs.work_item_id }}
 
     steps:
-      - name: Checkout main branch of DevOps repository
+      - name: Checkout main branch of DevSecOps repository
         uses: actions/checkout@v4
         with:
-          repository: mdf-sandbox/sample-devops
+          repository: ${{ vars.DEVSECOPS_REPOSITORY_VAR }}
           ref: main
           fetch-depth: 0
 
@@ -267,10 +267,10 @@ jobs:
     needs: [deploy]
 
     steps:
-      - name: Checkout main branch of DevOps repository
+      - name: Checkout main branch of DevSecOps repository
         uses: actions/checkout@v4
         with:
-          repository: mdf-sandbox/sample-devops
+          repository: ${{ vars.DEVSECOPS_REPOSITORY_VAR }}
           ref: main
           fetch-depth: 0
 

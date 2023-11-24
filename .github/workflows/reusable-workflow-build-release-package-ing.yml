@@ -27,7 +27,7 @@ jobs:
 
     steps:
       - name: Checkout main branch of ${{ inputs.repository }} repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repository }}
           ref: main
@@ -61,8 +61,8 @@ jobs:
 
       - name: Setup global Git configs
         run: |
-            git config --global user.name "DevOps"
-            git config --global user.email "DevOps@users.noreply.github.com"
+            git config --global user.name "DevSecOps"
+            git config --global user.email "DevSecOps@users.noreply.github.com"
 
       - name: Release version v${{ env.RELEASE_VERSION }} on main branch
         if: ${{ startsWith(inputs.ref, 'release/') }}
@@ -93,10 +93,10 @@ jobs:
 
     steps:
 
-      - name: Checkout main branch of DevOps repository
-        uses: actions/checkout@v3
+      - name: Checkout main branch of DevSecOps repository
+        uses: actions/checkout@v4
         with:
-          repository: mdf-sandbox/sample-devops
+          repository: ${{ vars.DEVSECOPS_REPOSITORY_VAR }}
           ref: main
           fetch-depth: 0
 

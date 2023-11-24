@@ -27,7 +27,7 @@ jobs:
 
     steps:
       - name: Checkout ${{ inputs.ref }} branch of ${{ inputs.repository }} repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repository }}
           ref: ${{ inputs.ref }}
@@ -56,8 +56,8 @@ jobs:
 
       - name: Setup global Git configs
         run: |
-          git config --global user.name "DevOps"
-          git config --global user.email "DevOps@users.noreply.github.com"
+          git config --global user.name "DevSecOps"
+          git config --global user.email "DevSecOps@users.noreply.github.com"
 
       - name: Initial pre-release version on release branch
         if: ${{ inputs.ref == 'main' }}

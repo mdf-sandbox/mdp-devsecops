@@ -150,7 +150,7 @@ jobs:
       work_item_id: ${{ steps.op1.outputs.work_item_id }}
 
     steps:
-      - name: Checkout main branch of DevOps repository
+      - name: Checkout main branch of DevSecOps repository
         uses: actions/checkout@v4
         with:
           repository: ${{ vars.DEVSECOPS_REPOSITORY_VAR }}
@@ -260,7 +260,7 @@ jobs:
 
     steps:
 
-      - name: Checkout main branch of DevOps repository
+      - name: Checkout main branch of DevSecOps repository
         uses: actions/checkout@v4
         with:
           repository: ${{ vars.DEVSECOPS_REPOSITORY_VAR }}
@@ -325,9 +325,9 @@ jobs:
         post_deployment_script: ${{ fromJSON(inputs.post_deployment_script) }}
 
     steps:
-      - name: Checkout main branch of DevOps repository
+      - name: Checkout main branch of DevSecOps repository
         if: ${{ inputs.post_deployment_script != '["skip"]' }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ vars.DEVSECOPS_REPOSITORY_VAR }}
           ref: main
@@ -397,7 +397,7 @@ jobs:
     needs: [deploy-databricks-bundle, deploy-files-to-volumes, execute-post-deployment-script]
 
     steps:
-      - name: Checkout main branch of DevOps repository
+      - name: Checkout main branch of DevSecOps repository
         uses: actions/checkout@v4
         with:
           repository: ${{ env.DEVSECOPS_REPOSITORY_VAR }}

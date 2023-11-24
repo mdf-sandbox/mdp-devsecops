@@ -81,11 +81,11 @@ jobs:
         run: |
           echo "pre_approve_status=approved" >> $GITHUB_OUTPUT
 
-      - name: Checkout main branch of DevOps repository
+      - name: Checkout main branch of DevSecOps repository
         if: ${{ inputs.run_id != '' }}
         uses: actions/checkout@v4
         with:
-          repository: mdf-sandbox/sample-devops
+          repository: ${{ vars.DEVSECOPS_REPOSITORY_VAR }}
           ref: main
           fetch-depth: 0
 
@@ -138,12 +138,12 @@ jobs:
           echo "RUN_RESULT_STATE=$(jq -r '.result_state' run_metadata.json)" >> $GITHUB_OUTPUT
           echo "RUN_NOTEBOOK_PATH=$(jq -r '.notebook_path' run_metadata.json)" >> $GITHUB_OUTPUT
           echo "RUN_PAGE_URL=$(jq -r '.run_page_url' run_metadata.json)" >> $GITHUB_OUTPUT
-            
-      # - name: test       
+
+      # - name: test
       #   if: ${{ (inputs.run_id != '') && (!startsWith(steps.adb_meta.outputs.RUN_NOTEBOOK_PATH, env.APPROVAL_GATE_PATH) || (steps.adb_meta.outputs.RUN_RESULT_STATE == 'SUCCESS')) }}
-      #   run: 
+      #   run:
       #     echo "::error::Please check the result of workflow run id '${{ inputs.run_id }}' from this url '${{ steps.adb_meta.outputs.RUN_PAGE_URL }}'"
-          
+
       - name: Pending Approval
         id: op2
         if: ${{ (inputs.run_id != '') && (!startsWith(steps.adb_meta.outputs.RUN_NOTEBOOK_PATH, env.APPROVAL_GATE_PATH) || (steps.adb_meta.outputs.RUN_RESULT_STATE != 'SUCCESS')) }}
@@ -163,11 +163,11 @@ jobs:
           echo ":::${{ needs.check-approval-gate.outputs.run_result_state }}"
           echo ":::${{ needs.check-approval-gate.outputs.run_notebook_path }}"
           echo ":::${{ needs.check-approval-gate.outputs.run_page_url }}"
-          
-      - name: Checkout main branch of DevOps repository
+
+      - name: Checkout main branch of DevSecOps repository
         uses: actions/checkout@v4
         with:
-          repository: mdf-sandbox/sample-devops
+          repository: ${{ vars.DEVSECOPS_REPOSITORY_VAR }}
           ref: main
           fetch-depth: 0
 
