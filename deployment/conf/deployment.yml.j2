@@ -1,0 +1,105 @@
+#{% set DEFAULT_WORKFLOW_NAME = env['REPOSITORY'] %}
+
+build:
+  no_build: true
+
+custom:
+  ###CLUSTER-SETTINGS###
+  basic-job-cluster-settings: &basic-job-cluster-settings
+    #policy_id: "cluster-policy://{{ env['JOB_CLUSTER_POLICY_NAME'] }}"
+    policy_id: "cluster-policy://Job Compute"
+    spark_version: "11.3.x-scala2.12"
+    runtime_engine: STANDARD
+    spark_env_vars:
+        TZ: "Etc/GMT-7"
+        ENVIRONMENT: {{ env['ENVIRONMENT'] }}
+    # init_scripts:
+    #   - dbfs:
+    #       destination: "dbfs:/{{ env['REPO_DIR'] }}/set_private_pip_repositories.sh"
+    spark_conf: {{ var['SPARK_CONF'] }}
+
+  basic-static-job-cluster-settings: &basic-static-job-cluster-settings
+    <<: *basic-job-cluster-settings
+    driver_node_type_id: Standard_DS3_v2
+    node_type_id: Standard_DS3_v2
+    num_workers: 1
+
+  # small-auto-job-cluster-settings: &small-auto-job-cluster-settings
+  #   <<: *basic-job-cluster-settings
+  #   driver_node_type_id: Standard_DS3_v2
+  #   node_type_id: Standard_DS3_v2
+  #   autoscale:
+  #     min_workers: 2
+  #     max_workers: 4
+
+  # medium-auto-job-cluster-settings: &medium-auto-job-cluster-settings
+  #   <<: *basic-job-cluster-settings
+  #   driver_node_type_id: Standard_DS3_v2
+  #   node_type_id: Standard_DS3_v2
+  #   autoscale:
+  #     min_workers: 2
+  #     max_workers: 6
+
+  # large-auto-job-cluster-settings: &large-auto-job-cluster-settings
+  #   <<: *basic-job-cluster-settings
+  #   driver_node_type_id: Standard_DS3_v2
+  #   node_type_id: Standard_DS3_v2
+  #   autoscale:
+  #     min_workers: 4
+  #     max_workers: 8
+
+  ###WORKFLOW-SETTINGS###
+  workflows-settings: &workflows-settings
+    tags:
+      repo_name: {{ env['REPOSITORY'] }}
+    email_notifications:
+      no_alert_for_skipped_runs: "false"
+    format: MULTI_TASK
+    access_control_list:
+      #- user_name: {{ env['AR_MDF_FRMWK_APP_ID'] }}
+      #  permission_level: "IS_OWNER"
+      - user_name: "a.hongtrakulchai@accenture.com"
+        permission_level: "IS_OWNER"
+
+  ###TASK-SETTINGS###
+  basic-task-settings: &basic-task-settings
+    job_cluster_key: basic_static_job_cluster
+    timeout_seconds: 7200
+    max_retries: 0
+    max_concurrent_runs: 1
+    email_notifications: {}
+
+  # etl-task-settings: &etl-task-settings
+  #   <<: *basic-task-settings
+  #   libraries:
+  #     - pypi:
+  #         package: "{{ env['REPOS'] }}=={{ env['PACKAGE_VERSION'] }}"
+
+environments:
+  {{ env['ENVIRONMENT'] }}:
+    workflows:
+      - name: {{ env['DEFAULT_WORKFLOW_NAME'] }}
+        <<: *workflows-settings
+
+        job_clusters:
+          - job_cluster_key: basic_static_job_cluster
+            new_cluster:
+              <<: *basic-static-job-cluster-settings
+          # - job_cluster_key: small_auto_scale_job_cluster
+          #   new_cluster:
+          #     <<: *small-auto-job-cluster-settings
+          # - job_cluster_key: medium_auto_scale_job_cluster
+          #   new_cluster:
+          #     <<: *medium-auto-job-cluster-settings
+          # - job_cluster_key: large_auto_scale_job_cluster
+          #   new_cluster:
+          #     <<: *large-auto-job-cluster-settings
+
+        tasks:
+          - task_key: check_approval_gate
+            job_cluster_key: basic_static_job_cluster
+            notebook_task:
+              notebook_path: "{{ env['APPROVAL_GATE_PATH'] }}/test_script"
+              source: WORKSPACE
+            base_parameters:
+              notebook_path: ""

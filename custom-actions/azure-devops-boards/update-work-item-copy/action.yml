@@ -1,0 +1,56 @@
+name: update-work-item
+description: 'Update a work item on Azure Boards'
+inputs:
+  pr_state:
+    description: 'Pull request state'
+    required: false
+    default: ''
+  pr_merged_by:
+    description: 'Pull request merged by'
+    required: false
+    default: ''
+  pr_merged_at:
+    description: 'Pull request merged at'
+    required: false
+    default: ''
+  environment:
+    description: 'Target environment to deploy'
+    required: false
+    default: ''
+  work_item_id:
+    description: 'Azure Boards work item id'
+    required: true
+  board_column:
+    description: 'Azure Boards board column'
+    required: true
+  token:
+    description: 'Azure Artifacts Personal Access Token'
+    required: true
+  run_id:
+    description: 'Azure Databricks Run ID'
+    required: true
+  run_result_state:
+    description: 'Azure Databricks Run ID State'
+    required: true
+  run_notebook_path:
+    description: 'Azure Databricks Run ID Notebook Path'
+    required: true
+  run_page_url:
+    description: 'Azure Databricks Run ID Page URL'
+    required: true
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.pr_state }}
+    - ${{ inputs.pr_merged_by }}
+    - ${{ inputs.pr_merged_at }}
+    - ${{ inputs.environment }}
+    - ${{ inputs.work_item_id }}
+    - ${{ inputs.board_column }}
+    - ${{ inputs.token }}
+    - ${{ inputs.run_id }}
+    - ${{ inputs.run_result_state }}
+    - ${{ inputs.run_notebook_path }}
+    - ${{ inputs.run_page_url }}

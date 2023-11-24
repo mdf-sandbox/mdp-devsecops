@@ -1,0 +1,56 @@
+name: create-work-item
+description: 'Create a work item on Azure Boards'
+inputs:
+  repository:
+    description: 'Repository name'
+    required: true
+  pr_title:
+    description: 'Pull request title'
+    required: true
+  pr_url:
+    description: 'Pull request URL'
+    required: true
+  pr_repository_url:
+    description: 'Pull requset repository URL'
+    required: true
+  pr_number:
+    description: 'Pull request number'
+    required: true
+  pr_state:
+    description: 'Pull request state'
+    required: true
+  pr_head_ref:
+    description: 'Pull request from branch'
+    required: true
+  pr_base_ref:
+    description: 'Pull request base branch to merge into'
+    required: true
+  pr_created_by:
+    description: 'Pull request created by'
+    required: true
+  pr_created_at:
+    description: 'Pull request created at'
+    required: true
+  package_name:
+    description: 'Package name to promote'
+    required: true
+  token:
+    description: 'Azure Artifacts Personal Access Token'
+    required: true
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.repository }}
+    - ${{ inputs.pr_title }}
+    - ${{ inputs.pr_url }}
+    - ${{ inputs.pr_repository_url }}
+    - ${{ inputs.pr_number }}
+    - ${{ inputs.pr_state }}
+    - ${{ inputs.pr_head_ref }}
+    - ${{ inputs.pr_base_ref }}
+    - ${{ inputs.pr_created_by }}
+    - ${{ inputs.pr_created_at }}
+    - ${{ inputs.package_name }}
+    - ${{ inputs.token }}

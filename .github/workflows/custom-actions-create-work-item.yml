@@ -1,0 +1,41 @@
+name: custom-actions-create-work-item
+
+on:
+  # Allows you to run this workflow manually from the Action tab
+  workflow_dispatch:
+    inputs:
+      package_name:
+        type: string
+        description: Package name to promote
+        required: true
+      package_version:
+        type: string
+        description: Package version to promote
+        required: true
+      feed_view:
+        type: string
+        description: Target Feed view
+        required: true
+      token:
+        type: string
+        description: Azure Artifacts Personal Access Token
+        required: true
+
+jobs:
+  create-work-item:
+    name: Test Custom Actions
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Promote Package to ${{ inputs.feed_view }}
+        uses: ./custom-actions/azure-devops-boards/create-work-item
+        with:
+          package_name: ${{ inputs.package_name }}
+          package_version: ${{ inputs.package_version }}
+          feed_view: ${{ inputs.feed_view }}
+          token: ${{ inputs.token }}

@@ -1,0 +1,4 @@
+variables:
+  my_cluster_id:
+    description: The ID of an existing cluster.
+    default: 0921-080330-m15ze66k

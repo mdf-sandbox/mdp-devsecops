@@ -1,0 +1,133 @@
+name: custom-actions-test-deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        description: Target environment
+        default: sit
+      repository:
+        type: string
+        description: Repository name
+        required: true
+      ref:
+        type: string
+        description: Branch name
+        required: true
+      run_id:
+        type: string
+        description: Databricks Run ID
+        default: ''
+
+  # Allows you to run this workflow manually from the Action tab
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        description: Target environment
+        options:
+         - UAT
+         - PRD
+      repository:
+        type: string
+        description: Repository name
+        required: true
+      ref:
+        type: string
+        description: Release tag
+        required: true
+
+# Use the Bash shell as default settings for all jobs in the workflow
+defaults:
+  run:
+    shell: bash
+
+jobs:
+
+  deploy:
+    name: Deploy to ${{ inputs.environment }} environment
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout main branch of DevOps repository
+        uses: actions/checkout@v3
+        with:
+          repository: mdf-sandbox/sample-devops
+          ref: main
+          fetch-depth: 0
+
+      - name: Load environment variables from ${{ inputs.environment }} dotenv file
+        run: |
+          cat ./dotenv/${{ inputs.environment }}.env >> $GITHUB_ENV
+
+      - name: Checkout ${{ inputs.ref }} of ${{ inputs.repository }} repository
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ vars.PYTHON_VERSION_VAR }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ vars.POETRY_VERSION_VAR }}
+
+      - name: Install pip and etc
+        run: |
+          pip install --upgrade pip
+          pip install databricks-cli
+          pip install dbx
+          pip install jq
+          pip install yq
+
+      - name: Set environment variables
+        run: |
+          echo "DEFAULT_WORKFLOW_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
+          echo "REPOSITORY=${{ inputs.repository }}" >> $GITHUB_ENV
+          echo "APPROVAL_GATE_PATH=MDF/${{ inputs.repository }}/${{ inputs.environment }}" >> $GITHUB_ENV
+          echo "ROOT_PATH=MDF/${{ inputs.repository }}" >> $GITHUB_ENV
+          echo "WORKSPACE_PATH=$(yq '.FILES_LOCATION_CONF' ./deployment/services/databricks/config.yml | jq -c '.workspace | to_entries')" >> $GITHUB_ENV
+          echo "DBFS_PATH=$(yq '.FILES_LOCATION_CONF' ./deployment/services/databricks/config.yml | jq -c '.dbfs | to_entries')" >> $GITHUB_ENV
+          echo "PACKAGE_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
+          echo "CURRENT_VERSION=$(poetry version --dry-run -s)" >> $GITHUB_ENV
+
+      - name: Connect to Databricks with Frmwk profiles
+        run: |
+          echo ${{ secrets.AZURE_DATABRICKS_PAT }} | \
+            databricks configure --profile ar-frmwk --host ${{ env.DATABRICKS_HOST }} --jobs-api-version ${{ env.DATABRICKS_JOBS_API_VERSION }} --token
+
+      - name: Deploy deployment approval gate components to Databricks
+        if: ${{ contains(fromJson('["sit", "uat"]'), inputs.environment) }}
+        run: |
+          # Copy files to Databricks Workspace
+          databricks --profile=ar-frmwk workspace mkdirs /${{ env.APPROVAL_GATE_PATH }}
+          dbx sync workspace --profile=ar-frmwk --source ./deployment/services/databricks/workspace/${{ inputs.environment }} --dest-dir /${{ env.APPROVAL_GATE_PATH }} --no-watch --full-sync
+          databricks --profile=ar-frmwk workspace ls /${{ env.APPROVAL_GATE_PATH }} --absolute -l
+
+      - name: Deploy deployment scripts to Databricks
+        run: |
+          # Copy files to Databricks Workspace
+          echo '${{ env.WORKSPACE_PATH }}' | jq -r '.[] | .key + " " + .value' | while read SOURCE_PATH DEST_PATH;do
+            databricks --profile=ar-frmwk workspace mkdirs /${{ env.ROOT_PATH }}/${DEST_PATH}
+            dbx sync workspace --profile=ar-frmwk --source ./deployment/services/databricks/workspace/FILES_LOCATION_CONF/${SOURCE_PATH} --dest-dir /${{ env.ROOT_PATH }}/${DEST_PATH} --no-watch --full-sync
+            databricks --profile=ar-frmwk workspace ls /${{ env.ROOT_PATH }}/${DEST_PATH} --absolute -l
+          done
+
+          # Copy files to Databricks DBFS
+          echo '${{ env.DBFS_PATH }}' | jq -r '.[] | .key + " " + .value' | while read SOURCE_PATH DEST_PATH;do
+            databricks --profile=ar-frmwk fs mkdirs dbfs:/FileStore/${{ env.ROOT_PATH }}/${DEST_PATH}
+            dbx sync dbfs --profile=ar-frmwk --source ./deployment/services/databricks/dbfs/FILES_LOCATION_CONF/${SOURCE_PATH} --dest /FileStore/${{ env.ROOT_PATH }}/${DEST_PATH} --no-watch --full-sync
+            databricks --profile=ar-frmwk fs ls dbfs:/FileStore/${{ env.ROOT_PATH }}/${DEST_PATH} --absolute -l
+          done
+
+      - name: Deploy Databricks workflow to ${{ inputs.environment }} environment
+        run: |
+          databricks --profile=ar-frmwk jobs list
+          dbx deploy --environment default --deployment-file=./deployment/conf/deployment.yml.j2 --jinja-variables-file=./deployment/conf/includes/jinja_variables.yml --no-package
+          databricks --profile=ar-frmwk jobs list

@@ -1,0 +1,84 @@
+name: custom-actions-run-notebook
+
+on:
+  # Allows you to run this workflow manually from the Action tab
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: string
+        description: Target environment
+        default: dev
+      repository:
+        type: string
+        description: Repository name
+        required: true
+      ref:
+        type: string
+        required: true
+      post_deployment_script:
+        type: string
+        default: '["skip"]'
+
+jobs:
+  run-notebook:
+    name: Test Custom Actions
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: true
+      matrix:
+        post_deployment_script: ${{ fromJSON(inputs.post_deployment_script) }}
+
+    steps:
+      - name: Checkout main branch of DevOps repository
+        if: ${{ inputs.post_deployment_script != '["skip"]' }}
+        uses: actions/checkout@v4
+        with:
+          repository: mdf-sandbox/sample-devops
+          ref: main
+          fetch-depth: 0
+
+      - name: Load environment variables from ${{ inputs.environment }} dotenv file
+        if: ${{ inputs.post_deployment_script != '["skip"]' }}
+        run: |
+          cat ./dotenv/${{ inputs.environment }}.env >> $GITHUB_ENV
+
+      - name: Checkout ${{ inputs.ref }} of ${{ inputs.repository }} repository
+        if: ${{ inputs.post_deployment_script != '["skip"]' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GHE_DEVOPS_TOKEN }}
+
+      - name: Trigger databricks notebook
+        id: databricks-run
+        if: ${{ inputs.post_deployment_script != '["skip"]' }}
+        uses: databricks/run-notebook@v0
+        with:
+          databricks-host: ${{ env.DATABRICKS_HOST }}
+          databricks-token: ${{ secrets.AZURE_DATABRICKS_PAT }}
+          run-name: "execute-post-deployment-script"
+          # local-notebook-path: "./script/mdp/post_deployment/migration/MDP_INGESTION_BSL_0001/adhoc.ipynb"
+          workspace-notebook-path: "/script/mdp/post_deployment/migration/MDP_INGESTION_BSL_0001/${{ matrix.post_deployment_script }}"
+          existing-cluster-id: "0921-080330-m15ze66k"
+          notebook-params-json: >
+            [
+              {
+                "key": "environment",
+                "value": "${{ inputs.environment }}"
+              }
+            ]
+          access-control-list-json: >
+            [
+              {
+                "user_name": "a.hongtrakulchai@accenture.com",
+                "permission_level": "IS_OWNER"
+              }
+            ]
+          timeout-seconds: 900
+
+      - name: Check Run Output
+        if: ${{ inputs.post_deployment_script != '["skip"]' }}
+        run: |
+          echo ${{ steps.databricks-run.outputs.notebook-output }}

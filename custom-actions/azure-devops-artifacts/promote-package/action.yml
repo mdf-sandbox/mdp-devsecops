@@ -1,0 +1,24 @@
+name: promote-package
+description: 'Promote package in Azure Artifacts'
+inputs:
+  package_name:
+    description: 'Package name to promote'
+    required: true
+  package_version:
+    description: 'Package version to promote'
+    required: true
+  feed_view:
+    description: 'Target Feed view'
+    required: true
+  token:
+    description: 'Azure Artifacts Personal Access Token'
+    required: true
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.package_name }}
+    - ${{ inputs.package_version }}
+    - ${{ inputs.feed_view }}
+    - ${{ inputs.token }}

@@ -1,0 +1,152 @@
+name: reusable-workflow-build-release-package
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        type: string
+        description: Repository name
+        required: true
+      ref:
+        type: string
+        description: Source branch of the pull request
+        required: true
+
+# Use the Bash shell as default settings for all jobs in the workflow
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build-release-package:
+    name: Build Release Package
+    runs-on: ubuntu-20.04
+    if: ${{ (startsWith(inputs.ref, 'release/')) || startsWith(inputs.ref, 'hotfix/') }}
+    outputs:
+      work_item_id: ${{ steps.op1.outputs.work_item_id }}
+
+    steps:
+      - name: Checkout main branch of ${{ inputs.repository }} repository
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.repository }}
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ vars.PYTHON_VERSION_VAR }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ vars.POETRY_VERSION_VAR }}
+
+      - name: Install pip and etc
+        run: |
+          pip install --upgrade pip
+          pip install twine
+
+      - name: Set environment variables
+        run: |
+          echo "PACKAGE_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
+          echo "CURRENT_VERSION=$(poetry version --dry-run -s)" >> $GITHUB_ENV
+          echo "RELEASE_VERSION=$(echo $(poetry version --dry-run -s) | awk -F'a' '{print $1}')" >> $GITHUB_ENV
+          echo "WORK_ITEM_ID=$(echo ${{ github.event.pull_request.title }} | awk -F'AB#' '{print $2}' | awk -F' ' '{print $1}')" >> $GITHUB_ENV
+
+      - name: Bump package version to ${{ env.RELEASE_VERSION }}
+        run: |
+          poetry self add poetry-bumpversion
+          poetry version ${{ env.RELEASE_VERSION }}
+
+      - name: Build package
+        run: |
+          poetry build -f wheel
+
+      - name: Publish package to Azure Artifact
+        run: |
+          poetry run twine upload dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.AZURE_DEVOPS_PAT }}
+          TWINE_REPOSITORY_URL: https://pkgs.dev.azure.com/kBank-MDF-SANDBOX/_packaging/kBank-MDF-SANDBOX/pypi/upload
+
+      - name: Add Azure Boards environment variables
+        run: |
+          echo "WORK_ITEM_ID=$(echo ${{ env.WORK_ITEM_ID }})" > ./deployment/service/azure_devops/azure_devops_boards.env
+
+      - name: Setup global Git configs
+        run: |
+          git config --global user.name "DevOps"
+          git config --global user.email "DevOps@users.noreply.github.com"
+
+      - name: Release version v${{ env.RELEASE_VERSION }} on main branch
+        if: ${{ startsWith(inputs.ref, 'release/') }}
+        run: |
+          git commit -am "chore: :bookmark: Release version v${{ env.RELEASE_VERSION }}"
+          git push -u origin main
+          git tag -a "v${{ env.RELEASE_VERSION }}" -m "Release version v${{ env.RELEASE_VERSION }}"
+          git push origin "v${{ env.RELEASE_VERSION }}"
+          git push -d origin ${{ inputs.ref }}
+
+      - name: Release hotfix version v${{ env.RELEASE_VERSION }} on main branch
+        if: ${{ startsWith(inputs.ref, 'hotfix/') }}
+        run: |
+          git tag -a "v${{ env.RELEASE_VERSION }}" -m "Release hotfix version v${{ env.RELEASE_VERSION }}"
+          git push origin "v${{ env.RELEASE_VERSION }}"
+          git push -d origin ${{ inputs.ref }}
+
+      - name: Checkout main branch of DevOps repository
+        uses: actions/checkout@v3
+        with:
+          repository: mdf-sandbox/sample-devops
+          ref: main
+          fetch-depth: 0
+
+      - name: Promote package to DEV feed views
+        if: ${{ startsWith(inputs.ref, 'release/') }}
+        uses: ./custom-actions/azure-devops-artifacts/promote-package
+        with:
+          package_name: ${{ env.PACKAGE_NAME }}
+          package_version: ${{ env.RELEASE_VERSION }}
+          feed_view: "DEV"
+          token: ${{ secrets.AZURE_DEVOPS_PAT }}
+
+      - name: Promote package to all feed views
+        if: ${{ startsWith(inputs.ref, 'hotfix/') }}
+        uses: ./custom-actions/azure-devops-artifacts/promote-package
+        with:
+          package_name: ${{ env.PACKAGE_NAME }}
+          package_version: ${{ env.RELEASE_VERSION }}
+          feed_view: "[DEV, SIT, UAT, PRD]"
+          token: ${{ secrets.AZURE_DEVOPS_PAT }}
+
+      - name: Set job outputs
+        id: op1
+        run: |
+          echo "work_item_id=$(echo ${{ env.WORK_ITEM_ID }})" >> $GITHUB_OUTPUT
+
+  update-work-item:
+    name: Update a work item on Azure Boards
+    runs-on: ubuntu-20.04
+    needs: [build-release-package]
+
+    steps:
+
+      - name: Checkout main branch of DevOps repository
+        uses: actions/checkout@v3
+        with:
+          repository: mdf-sandbox/sample-devops
+          ref: main
+          fetch-depth: 0
+
+      - name: Update a work item on Azure Boards
+        uses: ./custom-actions/azure-devops-boards/update-work-item
+        with:
+          pr_state: ${{ github.event.pull_request.state }}
+          pr_merged_by: ${{ github.event.pull_request.merged_by.login }}
+          pr_merged_at: ${{ github.event.pull_request.merged_at }}
+          work_item_id: ${{ needs.build-release-package.outputs.work_item_id }}
+          board_column: 'PR - Merged'
+          token: ${{ secrets.AZURE_DEVOPS_PAT }}

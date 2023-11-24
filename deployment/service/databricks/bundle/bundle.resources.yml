@@ -1,0 +1,9 @@
+# resources:
+#   jobs:
+#     hello-job:
+#       name: hello-job
+#       tasks:
+#         - task_key: hello-task
+#           existing_cluster_id: ${var.my_cluster_id}
+#           notebook_task:
+#             notebook_path: /script/mdp/post_deployment/MDP_INGESTION_BSL_0001/adhoc

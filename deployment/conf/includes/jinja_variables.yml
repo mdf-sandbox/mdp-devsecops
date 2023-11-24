@@ -1,0 +1,5 @@
+# spark config
+SPARK_CONF:
+  spark.databricks.pyspark.enableProcessIsolation: false
+  spark.databricks.pyspark.enablePy4JSecurity: false
+  spark.databricks.repl.allowedLanguages: sql,python,r

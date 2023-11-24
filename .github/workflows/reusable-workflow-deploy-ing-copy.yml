@@ -1,0 +1,184 @@
+name: reusable-workflow-deploy-ing
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        description: Target environment
+        required: true
+      repository:
+        type: string
+        description: Repository name
+        required: true
+      ref:
+        type: string
+        description: Branch name
+        required: true
+      baseline_no:
+        type: string
+        description: Deployment Baseline Number
+        required: true
+      post_deployment_script:
+        type: string
+        description: Post-deployment Scripts
+        required: true
+      run_id:
+        type: string
+        description: Databricks Run ID
+        required: true
+
+  # Allows you to run this workflow manually from the Action tab
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        description: Target environment
+        options:
+         - uat
+         - prod
+      repository:
+        type: string
+        description: Repository name
+        required: true
+      ref:
+        type: string
+        description: Release tag
+        required: true
+      baseline_no:
+        type: string
+        description: Deployment Baseline Number
+        required: true
+      post_deployment_script:
+        type: string
+        description: Post-deployment Scripts
+        required: true
+      run_id:
+        type: string
+        description: Databricks Run ID
+        required: true
+
+# Use the Bash shell as default settings for all jobs in the workflow
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  check-approval-gate:
+    name: Check Approval Gate
+    runs-on: ubuntu-20.04
+    outputs:
+      pre_approve_status: ${{ steps.op1.outputs.pre_approve_status }}
+      post_approve_status: ${{ steps.op2.outputs.post_approve_status }}
+      run_result_state: ${{ steps.adb_meta.outputs.RUN_RESULT_STATE }}
+      run_notebook_path: ${{ steps.adb_meta.outputs.RUN_NOTEBOOK_PATH }}
+      run_page_url: ${{ steps.adb_meta.outputs.RUN_PAGE_URL }}
+
+    steps:
+      - name: Set default approval status
+        if: always()
+        id: op1
+        run: |
+          echo "pre_approve_status=approved" >> $GITHUB_OUTPUT
+
+      - name: Checkout main branch of DevOps repository
+        if: ${{ inputs.run_id != '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: mdf-sandbox/sample-devops
+          ref: main
+          fetch-depth: 0
+
+      - name: Set environment variables
+        if: ${{ inputs.run_id != '' }}
+        env:
+          REPOSITORY_VAR: ${{ inputs.repository }}
+        run: |
+          # echo "APPROVAL_GATE_ENVIRONMENT=${{ inputs.environment == 'uat' && 'sit' || 'uat' }}" >> $GITHUB_ENV
+          # echo "APPROVAL_GATE_PATH=${{ inputs.environment == 'uat' && '/Shared/MDF/$REPOSITORY_VAR/sit' || '/Shared/MDF/$REPOSITORY_VAR/uat' }}" >> $GITHUB_ENV
+          echo "APPROVAL_GATE_ENVIRONMENT=dev" >> $GITHUB_ENV
+          echo "APPROVAL_GATE_PATH=/test/mdp/unit/ingestion_area1/" >> $GITHUB_ENV #HARDCODE FOR TEST
+
+      - name: Load environment variables from ${{ env.APPROVAL_GATE_ENVIRONMENT }} dotenv file
+        if: ${{ inputs.run_id != '' }}
+        run: |
+          cat ./dotenv/${{ env.APPROVAL_GATE_ENVIRONMENT }}.env >> $GITHUB_ENV
+
+      - name: Install pip and etc
+        if: ${{ inputs.run_id != '' }}
+        run: |
+          pip install --upgrade pip
+          pip install jq
+          pip install yq
+
+      - name: Install Databricks CLI
+        if: ${{ inputs.run_id != '' }}
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+      - name: Connect to Databricks with Frmwk profiles
+        if: ${{ inputs.run_id != '' }}
+        run: |
+          echo ${{ secrets.AZURE_DATABRICKS_PAT }} | \
+            databricks configure --profile ar-frmwk --host ${{ env.DATABRICKS_HOST }} --token
+
+      - name: Get metadata from Databricks workflow Run ID
+        if: ${{ inputs.run_id != '' }}
+        run: |
+          # databricks --profile ar-frmwk runs get --run-id ${{ inputs.run_id }} | jq '{result_state: .state.result_state, notebook_path: .overriding_parameters.notebook_params.notebook_path, run_page_url: .run_page_url}' > run_metadata.json
+          # databricks --profile ar-frmwk jobs get-run ${{ inputs.run_id }} | jq '{result_state: .state.result_state, notebook_path: .job_parameters.[] | select(.name=="notebook_path") | .value, run_page_url: .run_page_url}' > run_metadata.json
+          databricks --profile ar-frmwk jobs get-run ${{ inputs.run_id }} | jq '{result_state: .state.result_state, notebook_path: (.job_parameters[] | select(.name=="notebook_path").value), run_page_url: .run_page_url}' > run_metadata.json
+          #databricks --profile ar-frmwk jobs get-run ${{ inputs.run_id }} | jq '{result_state: .state.result_state, notebook_path: .job_parameters | map(.value)[1], run_page_url: .run_page_url}' > run_metadata.json
+          cat run_metadata.json
+
+      - name: Set outputs from metadata
+        id: adb_meta
+        if: ${{ inputs.run_id != '' }}
+        run: |
+          echo "RUN_RESULT_STATE=$(jq -r '.result_state' run_metadata.json)" >> $GITHUB_OUTPUT
+          echo "RUN_NOTEBOOK_PATH=$(jq -r '.notebook_path' run_metadata.json)" >> $GITHUB_OUTPUT
+          echo "RUN_PAGE_URL=$(jq -r '.run_page_url' run_metadata.json)" >> $GITHUB_OUTPUT
+            
+      # - name: test       
+      #   if: ${{ (inputs.run_id != '') && (!startsWith(steps.adb_meta.outputs.RUN_NOTEBOOK_PATH, env.APPROVAL_GATE_PATH) || (steps.adb_meta.outputs.RUN_RESULT_STATE == 'SUCCESS')) }}
+      #   run: 
+      #     echo "::error::Please check the result of workflow run id '${{ inputs.run_id }}' from this url '${{ steps.adb_meta.outputs.RUN_PAGE_URL }}'"
+          
+      - name: Pending Approval
+        id: op2
+        if: ${{ (inputs.run_id != '') && (!startsWith(steps.adb_meta.outputs.RUN_NOTEBOOK_PATH, env.APPROVAL_GATE_PATH) || (steps.adb_meta.outputs.RUN_RESULT_STATE != 'SUCCESS')) }}
+        run: |
+          echo "::error::Please check the result of workflow run id '${{ inputs.run_id }}' from this url '${{ steps.adb_meta.outputs.RUN_PAGE_URL }}'"
+          echo "post_approve_status=pending" >> $GITHUB_OUTPUT
+          exit 1
+
+  update-work-item:
+    name: Update work item on Azure Boards
+    runs-on: ubuntu-20.04
+    needs: [check-approval-gate]
+
+    steps:
+      - name: Get Output
+        run: |
+          echo ":::${{ needs.check-approval-gate.outputs.run_result_state }}"
+          echo ":::${{ needs.check-approval-gate.outputs.run_notebook_path }}"
+          echo ":::${{ needs.check-approval-gate.outputs.run_page_url }}"
+          
+      - name: Checkout main branch of DevOps repository
+        uses: actions/checkout@v4
+        with:
+          repository: mdf-sandbox/sample-devops
+          ref: main
+          fetch-depth: 0
+
+      - name: Update a work item on Azure Boards
+        uses: ./custom-actions/azure-devops-boards/update-work-item-copy
+        with:
+          environment: ${{ inputs.environment }}
+          work_item_id: "71" #temporary
+          board_column: '${{ inputs.environment }} Deployment'
+          token: ${{ secrets.AZURE_DEVOPS_PAT }}
+          run_id: ${{ inputs.run_id }}
+          run_result_state: ${{ needs.check-approval-gate.outputs.run_result_state }}
+          run_notebook_path: ${{ needs.check-approval-gate.outputs.run_notebook_path }}
+          run_page_url: ${{ needs.check-approval-gate.outputs.run_page_url }}

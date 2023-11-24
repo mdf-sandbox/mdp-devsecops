@@ -1,0 +1,73 @@
+name: reusable-workflow-build-prerelease-package-ing
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        type: string
+        description: Repository name
+        required: true
+      ref:
+        type: string
+        required: true
+      bump_version_mode:
+        type: string
+        required: true
+
+# Use the Bash shell as default settings for all jobs in the workflow
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  bump_pre-release_version:
+    name: Build Pre-Release Package
+    runs-on: ubuntu-20.04
+    if: ${{ (inputs.ref == 'main') || (startsWith(inputs.ref, 'release/')) }}
+
+    steps:
+      - name: Checkout ${{ inputs.ref }} branch of ${{ inputs.repository }} repository
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ vars.PYTHON_VERSION_VAR }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ vars.POETRY_VERSION_VAR }}
+
+      - name: Set environment variables
+        run: |
+          echo "CURRENT_VERSION=$(poetry version --dry-run -s)" >> $GITHUB_ENV
+          echo "PRERELEASE_VERSION=$(poetry version ${{ inputs.ref == 'main' && inputs.bump_version_mode || 'prerelease' }} --dry-run -s)" >> $GITHUB_ENV
+          echo "RELEASE_VERSION=$(poetry version ${{ inputs.bump_version_mode == 'premajor' && 'major' || 'minor' }} --dry-run -s)" >> $GITHUB_ENV
+
+      - name: Bump package version to ${{ env.PRERELEASE_VERSION }}
+        run: |
+          poetry self add poetry-bumpversion
+          poetry version ${{ env.PRERELEASE_VERSION }}
+
+      - name: Setup global Git configs
+        run: |
+          git config --global user.name "DevOps"
+          git config --global user.email "DevOps@users.noreply.github.com"
+
+      - name: Initial pre-release version on release branch
+        if: ${{ inputs.ref == 'main' }}
+        run: |
+          git checkout -b "release/v${{ env.RELEASE_VERSION }}"
+          git commit -am "Initial pre-release version to ${{ inputs.bump_version_mode }} (${{ env.CURRENT_VERSION }} to ${{ env.PRERELEASE_VERSION }})"
+          git push -u origin "release/v${{ env.RELEASE_VERSION }}"
+
+      - name: Update pre-release version on release branch
+        if: ${{ startsWith(inputs.ref, 'release/') }}
+        run: |
+          git commit -am "Update pre-release version (${{ env.CURRENT_VERSION }} to ${{ env.PRERELEASE_VERSION }})"
+          git push -u origin ${{ inputs.ref }}

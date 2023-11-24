@@ -1,0 +1,28 @@
+name: update-pr-title
+description: 'Update Pull request title to link Azure Boards work item'
+inputs:
+  repository:
+    description: 'Repository name'
+    required: true
+  pr_title:
+    description: 'Pull request title'
+    required: true
+  pr_number:
+    description: 'Pull request number'
+    required: true
+  work_item_id:
+    description: 'Azure Boards work item id'
+    required: true
+  token:
+    description: 'GitHub Token'
+    required: true
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.repository }}
+    - ${{ inputs.pr_title }}
+    - ${{ inputs.pr_number }}
+    - ${{ inputs.work_item_id }}
+    - ${{ inputs.token }}

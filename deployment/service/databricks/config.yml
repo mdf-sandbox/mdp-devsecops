@@ -1,0 +1,13 @@
+# databricks files location config
+file_location_config:
+  workspace:
+    db_init_ddl: "/ddl/mdp/db_init/migration/"
+    table_init_ddl: "/ddl/mdp/table_init/migration/"
+    view_init_ddl: "/ddl/mdp/view_init/migration/"
+    post_deployment_script: "/script/mdp/post_deployment/migration/"
+    unit_test: "/test/mdp/unit/migration/"
+    sit_test: "/test/mdp/sit/migration/"
+    uat_test: "/test/mdp/uat/migration/"
+  adls_artifact:
+    config: "/config/mdp/ingestion/migration/"
+    mapping: "/mapping/mdp/ingestion_spec/migration/"

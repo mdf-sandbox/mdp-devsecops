@@ -1,0 +1,48 @@
+name: reusable-workflow-sync-databricks-repo
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+          type: string
+          description: Repository name
+          required: true
+      ref:
+          type: string
+          description: Branch name
+          required: true
+
+# Use the Bash shell as default settings for all jobs in the workflow
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  sync-databricks-repo:
+    name: Sync Databricks Repo
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main branch of DevOps repository
+        uses: actions/checkout@v3
+        with:
+          repository: mdf-sandbox/sample-devops
+          ref: main
+          fetch-depth: 0
+
+      - name: Load environment variables from dev dotenv file
+        run: |
+          cat ./dotenv/dev.env >> $GITHUB_ENV
+
+      - name: Install Databricks-CLI
+        run: |
+          pip install databricks-cli
+
+      - name: Connect to Databricks with Frmwk profiles
+        run: |
+          echo ${{ secrets.AZURE_DATABRICKS_PAT }} | \
+            databricks configure --profile ar-frmwk --host ${{ env.DATABRICKS_HOST }} --jobs-api-version ${{ env.DATABRICKS_JOBS_API_VERSION }} --token
+
+      - name: Update the repo to the latest commit on ${{ inputs.ref }} branch
+        run: |
+          databricks --profile ar-frmwk repos update --path /Repos/${{ inputs.repository }} --branch ${{ inputs.ref }}
