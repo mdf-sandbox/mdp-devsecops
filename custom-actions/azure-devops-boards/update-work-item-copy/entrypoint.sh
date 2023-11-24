@@ -28,14 +28,12 @@ echo ${INPUT_RUN_PAGE_URL}
 if [[ ${INPUT_PR_STATE} != '' ]]; then
   COMMENT="${INPUT_PR_MERGED_BY} merged this pull request at ${INPUT_PR_MERGED_AT}"
 else
-  # COMMENT="<div>Execute Approval Gate Check for Run ID: ${INPUT_RUN_ID}</div><div><br></div><div>{<span style="font-weight:normal\;"><span>&nbsp; </span>\n&quot;result_state&quot;: &quot;<b>${INPUT_RUN_RESULT_STATE}</b>&quot;,</span><span style="font-weight:normal\;"><span>&nbsp; </span>&quot;\nnotebook_path&quot;: &quot;<b>${INPUT_RUN_NOTEBOOK_PATH}</b>&quot;,</span><span style="font-weight:normal\;"><span>&nbsp; </span>&quot;\nrun_page_url&quot;: &quot;<b><a href="${INPUT_RUN_PAGE_URL}">${INPUT_RUN_PAGE_URL}</a></b>&quot;</span>}</div><div><br></div>"
-    # COMMENT="<div>Execute Approval Gate Check for Run ID: 70802930006636</div><div>{\"result_state\": \"<b>SUCCESS</b>\", \"notebook_path\": \"<b>/test/mdp/unit/ingestion_area1/1.summary_passed</b>\", \"run_page_url\": \"<b><a href=\\\"https://adb-5730376679189321.1.azuredatabricks.net/?o=5730376679189321#job/47563390805699/run/70802930006636\\\">https://adb-5730376679189321.1.azuredatabricks.net/?o=5730376679189321#job/47563390805699/run/70802930006636</a></b>\", }</div>"
-    COMMENT="<div>Execute Approval Gate Check for Run ID: 70802930006636</div>
-<div>{<br>
-  \"result_state\": \"<b>SUCCESS</b>\",<br>
-  \"notebook_path\": \"<b>/test/mdp/unit/ingestion_area1/1.summary_passed</b>\",<br>
-  \"run_page_url\": \"<b><a href=\\\"https://adb-5730376679189321.1.azuredatabricks.net/?o=5730376679189321#job/47563390805699/run/70802930006636\\\">https://adb-5730376679189321.1.azuredatabricks.net/?o=5730376679189321#job/47563390805699/run/70802930006636</a></b>\"<br>
-}</div>"
+    COMMENT="<div>Execute Approval Gate Check for Run ID: ${INPUT_RUN_ID}</div>
+<div><font size="12px">{<br>
+  \"result_state\": \"<b>${INPUT_RUN_RESULT_STATE}</b>\",<br>
+  \"notebook_path\": \"<b>${INPUT_RUN_NOTEBOOK_PATH}</b>\",<br>
+  \"run_page_url\": \"<b><a href=\\\"${INPUT_RUN_PAGE_URL}\\\">${INPUT_RUN_PAGE_URL}</a></b>\"<br>
+}</font></div>"
 fi
 
 
