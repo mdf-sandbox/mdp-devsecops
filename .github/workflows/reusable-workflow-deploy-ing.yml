@@ -82,7 +82,7 @@ jobs:
         if: ${{ inputs.run_id != '' }}
         uses: actions/checkout@v4
         with:
-          repository: ${{ env.DEVSECOPS_REPOSITORY_VAR }}
+          repository: ${{ vars.DEVSECOPS_REPOSITORY_VAR }}
           ref: main
           fetch-depth: 0
 
@@ -153,7 +153,7 @@ jobs:
       - name: Checkout main branch of DevOps repository
         uses: actions/checkout@v4
         with:
-          repository: ${{ env.DEVSECOPS_REPOSITORY_VAR }}
+          repository: ${{ vars.DEVSECOPS_REPOSITORY_VAR }}
           ref: main
           fetch-depth: 0
 
@@ -263,7 +263,7 @@ jobs:
       - name: Checkout main branch of DevOps repository
         uses: actions/checkout@v4
         with:
-          repository: ${{ env.DEVSECOPS_REPOSITORY_VAR }}
+          repository: ${{ vars.DEVSECOPS_REPOSITORY_VAR }}
           ref: main
           fetch-depth: 0
 
@@ -329,7 +329,7 @@ jobs:
         if: ${{ inputs.post_deployment_script != '["skip"]' }}
         uses: actions/checkout@v3
         with:
-          repository: ${{ env.DEVSECOPS_REPOSITORY_VAR }}
+          repository: ${{ vars.DEVSECOPS_REPOSITORY_VAR }}
           ref: main
           fetch-depth: 0
 
