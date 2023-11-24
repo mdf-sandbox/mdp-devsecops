@@ -33,7 +33,7 @@ jobs:
         if: ${{ inputs.post_deployment_script != '["skip"]' }}
         uses: actions/checkout@v4
         with:
-          repository: ${{ vars.DEVSECOPS_REPOSITORY_VAR }}
+          repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
           ref: main
           fetch-depth: 0
 

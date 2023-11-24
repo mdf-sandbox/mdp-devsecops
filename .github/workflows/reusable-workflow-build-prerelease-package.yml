@@ -74,8 +74,8 @@ jobs:
 
       - name: Setup global Git configs
         run: |
-          git config --global user.name "DevSecOps" #TODO: ${{ vars.DEVSECOPS_GITUSERNAME_VAR }}
-          git config --global user.email "DevSecOps@users.noreply.github.com" #TODO: ${{ vars.DEVSECOPS_GITEMAIL_VAR }}
+          git config --global user.name "DevOps" #TODO: ${{ vars.GITHUB_DEVOPS_USERNAME_VAR }}
+          git config --global user.email "DevOps@users.noreply.github.com" #TODO: ${{ vars.GITHUB_DEVOPS_EMAIL_VAR }}
 
       - name: Initial pre-release version on release branch
         if: ${{ inputs.ref == 'main' }}
@@ -93,7 +93,7 @@ jobs:
       - name: Checkout main branch of DevSecOps repository
         uses: actions/checkout@v4
         with:
-          repository: ${{ vars.DEVSECOPS_REPOSITORY_VAR }}
+          repository: ${{ vars.GITHUB_DEVOPS_REPOSITORY_VAR }}
           ref: main
           fetch-depth: 0
 
@@ -103,4 +103,4 @@ jobs:
           package_name: ${{ env.PACKAGE_NAME }}
           package_version: ${{ env.PRERELEASE_VERSION }}
           feed_view: DEV
-          token: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO ${{ secrets.GITHUB_MDP_DEVSECOPS_TOKEN }}
+          token: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO ${{ secrets.AZURE_DEVOPS_TOKEN }}

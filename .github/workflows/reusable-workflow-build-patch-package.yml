@@ -48,8 +48,8 @@ jobs:
 
       - name: Setup global Git configs
         run: |
-          git config --global user.name "DevSecOps" #TODO: ${{ vars.DEVSECOPS_GITUSERNAME_VAR }}
-          git config --global user.email "DevSecOps@users.noreply.github.com" #TODO: ${{ vars.DEVSECOPS_GITEMAIL_VAR }}
+          git config --global user.name "DevOps" #TODO: ${{ vars.GITHUB_DEVOPS_USERNAME_VAR }}
+          git config --global user.email "DevOps@users.noreply.github.com" #TODO: ${{ vars.GITHUB_DEVOPS_EMAIL_VAR }}
 
       - name: Initial patch version on hotfix branch
         run: |
