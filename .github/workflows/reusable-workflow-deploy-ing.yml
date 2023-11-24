@@ -396,7 +396,7 @@ jobs:
   update-work-item:
     name: Update work item on Azure Boards
     runs-on: ubuntu-20.04
-    needs: [deploy-databricks-bundle, deploy-files-to-volumes, execute-post-deployment-script]
+    needs: [check-approval-gate, deploy-databricks-bundle, deploy-files-to-volumes, execute-post-deployment-script]
     if: ${{ (inputs.environment != 'dev') }}
     steps:
       - name: Checkout main branch of DevSecOps repository
