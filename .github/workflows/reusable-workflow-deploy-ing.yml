@@ -407,7 +407,7 @@ jobs:
           fetch-depth: 0
 
       - name: Update a work item on Azure Boards
-        uses: ./custom-actions/azure-devops-boards/update-work-item-copy
+        uses: ./custom-actions/azure-devops-boards/update-work-item
         with:
           environment: ${{ inputs.environment }}
           work_item_id: ${{ needs.deploy-databricks-bundle.outputs.work_item_id }}
