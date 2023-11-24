@@ -68,19 +68,12 @@ jobs:
     name: Check Approval Gate
     runs-on: ubuntu-20.04
     outputs:
-      # pre_approve_status: ${{ steps.op1.outputs.pre_approve_status }}
-      post_approve_status: ${{ steps.op3.outputs.post_approve_status }}
-      run_result_state: ${{ steps.op2.outputs.RUN_RESULT_STATE }}
-      run_notebook_path: ${{ steps.op2.outputs.RUN_NOTEBOOK_PATH }}
-      run_page_url: ${{ steps.op2.outputs.RUN_PAGE_URL }}
+      run_result_state: ${{ steps.op1.outputs.RUN_RESULT_STATE }}
+      run_notebook_path: ${{ steps.op1.outputs.RUN_NOTEBOOK_PATH }}
+      run_page_url: ${{ steps.op1.outputs.RUN_PAGE_URL }}
+      approve_status: ${{ steps.op2.outputs.approve_status }}
 
     steps:
-      # - name: Set default approval status
-      #   if: always()
-      #   id: op1
-      #   run: |
-      #     echo "pre_approve_status=approved" >> $GITHUB_OUTPUT
-
       - name: Checkout main branch of DevOps repository
         if: ${{ inputs.run_id != '' }}
         uses: actions/checkout@v4
@@ -129,7 +122,7 @@ jobs:
           cat run_metadata.json
 
       - name: Set environment variables from metadata
-        id: op2
+        id: op1
         if: ${{ inputs.run_id != '' }}
         run: |
           echo "RUN_RESULT_STATE=$(jq -r '.result_state' run_metadata.json)" >> $GITHUB_OUTPUT
@@ -137,11 +130,11 @@ jobs:
           echo "RUN_PAGE_URL=$(jq -r '.run_page_url' run_metadata.json)" >> $GITHUB_OUTPUT
 
       - name: Pending Approval
-        id: op3
-        if: ${{ (inputs.run_id != '') && (!startsWith(steps.op2.outputs.RUN_NOTEBOOK_PATH, env.APPROVAL_GATE_PATH) || (steps.op2.outputs.RUN_RESULT_STATE != 'SUCCESS')) }}
+        id: op2
+        if: ${{ (inputs.run_id != '') && (!startsWith(steps.op1.outputs.RUN_NOTEBOOK_PATH, env.APPROVAL_GATE_PATH) || (steps.op1.outputs.RUN_RESULT_STATE != 'SUCCESS')) }}
         run: |
-          echo "::error::Please check the result of workflow run id '${{ inputs.run_id }}' from this url '${{ steps.op2.outputs.RUN_PAGE_URL }}'"
-          echo "post_approve_status=pending" >> $GITHUB_OUTPUT
+          echo "::error::Please check the result of workflow run id '${{ inputs.run_id }}' from this url '${{ steps.op1.outputs.RUN_PAGE_URL }}'"
+          echo "approve_status=pending" >> $GITHUB_OUTPUT
           exit 1
 
   deploy-databricks-bundle:
@@ -261,7 +254,6 @@ jobs:
     needs: [check-approval-gate]
 
     steps:
-
       - name: Checkout main branch of DevSecOps repository
         uses: actions/checkout@v4
         with:
