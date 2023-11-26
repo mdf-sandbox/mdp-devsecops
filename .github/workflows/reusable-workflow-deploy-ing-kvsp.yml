@@ -126,9 +126,9 @@ jobs:
         run: |
           echo "POST_DEPLOYMENT_SCRIPT_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.workspace | to_entries' | jq -r '.[] | select(.key=="post_deployment_script") | .value')" >> $GITHUB_ENV
 
-      - name: Starts a terminated Spark cluster
-        run: |
-          curl -X POST --header 'content-type:application/json' --header 'authorization:Bearer ${{ secrets.DATABRICKS_TOKEN }}' -d '{"cluster_id": "0921-080330-m15ze66k"}' ${{ env.DATABRICKS_HOST }}/api/2.0/clusters/start --insecure -v
+      # - name: Starts a terminated Spark cluster
+      #   run: |
+      #     curl -X POST --header 'content-type:application/json' --header 'authorization:Bearer ${{ secrets.DATABRICKS_TOKEN }}' -d '{"cluster_id": "0921-080330-m15ze66k"}' ${{ env.DATABRICKS_HOST }}/api/2.0/clusters/start --insecure -v
 
       - name: Trigger databricks notebook
         id: databricks-run
