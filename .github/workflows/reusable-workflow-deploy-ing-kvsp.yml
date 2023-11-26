@@ -147,7 +147,7 @@ jobs:
           access-control-list-json: >
             [
               {
-                "user_name": "a.hongtrakulchai@accenture.com",
+                "user_name": "38f6c759-dee8-41ae-9cad-728b3827b76c", #a.hongtrakulchai@accenture.com #TODO: change to ${{ steps.azurekeyvault.outputs.AR_FRMWK_CLIENT_ID_KV }}
                 "permission_level": "IS_OWNER"
               }
             ]
