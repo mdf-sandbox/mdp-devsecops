@@ -67,6 +67,12 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-20.04
+    strategy:
+      # fail-fast: true
+      max-parallel: 1 #To define the maximum number of concurrent jobs
+      matrix:
+        post_deployment_script: ${{ fromJSON(inputs.post_deployment_script) }}
+
     steps:
       - name: Checkout main branch of DevSecOps repository
         if: ${{ inputs.post_deployment_script != '["skip"]' }}
