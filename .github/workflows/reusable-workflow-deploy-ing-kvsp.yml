@@ -99,7 +99,6 @@ jobs:
 
       - name: Azure login
         if: ${{ inputs.post_deployment_script != '["skip"]' }}
-        if: ${{ inputs.run_id != '' }}
         uses: azure/login@v1
         with:
           creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AR_DEVOPS_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
