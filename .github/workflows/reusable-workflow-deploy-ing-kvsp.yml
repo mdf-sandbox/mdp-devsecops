@@ -126,42 +126,42 @@ jobs:
         run: |
           echo "POST_DEPLOYMENT_SCRIPT_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.workspace | to_entries' | jq -r '.[] | select(.key=="post_deployment_script") | .value')" >> $GITHUB_ENV
 
-      # - name: Starts a terminated Spark cluster
-      #   run: |
-      #     curl -X POST --header 'content-type:application/json' --header 'authorization:Bearer ${{ secrets.DATABRICKS_TOKEN }}' -d '{"cluster_id": "0921-080330-m15ze66k"}' ${{ env.DATABRICKS_HOST }}/api/2.0/clusters/start --insecure -v
-
-      - name: Trigger databricks notebook
-        id: databricks-run
-        if: ${{ inputs.post_deployment_script != '["skip"]' }}
-        uses: databricks/run-notebook@v0
-        with:
-          databricks-host: ${{ env.DATABRICKS_HOST }}
-          # databricks-token: ${{ secrets.AZURE_DATABRICKS_PAT }} #TODO: Change to SP login
-          databricks-token: ${{ secrets.DATABRICKS_TOKEN }} #TODO: Change to SP login
-          run-name: "execute-post-deployment-script"
-          workspace-notebook-path: "${{ env.POST_DEPLOYMENT_SCRIPT_PATH }}${{ inputs.baseline_no }}/${{ matrix.post_deployment_script }}"
-          existing-cluster-id: "0921-080330-m15ze66k" #dp-batch-processing
-          # existing-cluster-id: "1002-080329-vfiifjp9" #dp_fw_developing
-          notebook-params-json: >
-            [
-              {
-                "key": "environment",
-                "value": "${{ inputs.environment }}"
-              }
-            ]
-          access-control-list-json: >
-            [
-              {
-                "user_name": "38f6c759-dee8-41ae-9cad-728b3827b76c",
-                "permission_level": "IS_OWNER"
-              }
-            ]
-          # timeout-seconds: 900 #15 Minutes
-
-      - name: Check Run Output
-        if: ${{ inputs.post_deployment_script != '["skip"]' }}
+      - name: Start a terminated Spark cluster
         run: |
-          echo ${{ steps.databricks-run.outputs.notebook-output }}
+          curl -X POST --header 'content-type:application/json' --header 'authorization:Bearer ${{ secrets.DATABRICKS_TOKEN }}' -d '{"cluster_id": "0921-080330-m15ze66k"}' ${{ env.DATABRICKS_HOST }}/api/2.0/clusters/start --insecure -v
+
+      # - name: Trigger databricks notebook
+      #   id: databricks-run
+      #   if: ${{ inputs.post_deployment_script != '["skip"]' }}
+      #   uses: databricks/run-notebook@v0
+      #   with:
+      #     databricks-host: ${{ env.DATABRICKS_HOST }}
+      #     # databricks-token: ${{ secrets.AZURE_DATABRICKS_PAT }} #TODO: Change to SP login
+      #     databricks-token: ${{ secrets.DATABRICKS_TOKEN }} #TODO: Change to SP login
+      #     run-name: "execute-post-deployment-script"
+      #     workspace-notebook-path: "${{ env.POST_DEPLOYMENT_SCRIPT_PATH }}${{ inputs.baseline_no }}/${{ matrix.post_deployment_script }}"
+      #     existing-cluster-id: "0921-080330-m15ze66k" #dp-batch-processing
+      #     # existing-cluster-id: "1002-080329-vfiifjp9" #dp_fw_developing
+      #     notebook-params-json: >
+      #       [
+      #         {
+      #           "key": "environment",
+      #           "value": "${{ inputs.environment }}"
+      #         }
+      #       ]
+      #     access-control-list-json: >
+      #       [
+      #         {
+      #           "user_name": "38f6c759-dee8-41ae-9cad-728b3827b76c",
+      #           "permission_level": "IS_OWNER"
+      #         }
+      #       ]
+      #     timeout-seconds: 900 #15 Minutes
+
+      # - name: Check Run Output
+      #   if: ${{ inputs.post_deployment_script != '["skip"]' }}
+      #   run: |
+      #     echo ${{ steps.databricks-run.outputs.notebook-output }}
 
   # check-approval-gate:
   #   name: Check Approval Gate
