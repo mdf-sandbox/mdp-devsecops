@@ -123,6 +123,13 @@ jobs:
           keyvault: ${{ env.AZURE_KEYVAULT_NAME }}
           secrets: '${{ env.AR_FRMWK_CLIENT_ID_KV }}, ${{ env.AR_FRMWK_CLIENT_SECRET_KV }}, ${{ env.AR_FRMWK_TENANT_ID_KV }}, ${{ env.AR_FRMWK_SUBSCRIPTION_ID_KV }}'
 
+      - name: Set environment variables
+        run: |
+          echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value')" >> $GITHUB_ENV
+          echo "AR_FRMWK_CLIENT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value')" >> $GITHUB_ENV
+          echo "AR_FRMWK_CLIENT_SECRET_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_SECRET_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value')" >> $GITHUB_ENV
+
+
       # - name: Create Azure Databricks configuration profile
       #   run: |
       #     echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
@@ -136,9 +143,9 @@ jobs:
         run: |
           echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
           echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
-          echo "azure_tenant_id     = ${{ env.kvdevopsarfrmwk-tenantid }}" >> ~/.databrickscfg
-          echo "azure_client_id     = ${{ env.kvdevopsarfrmwk-clientid }}" >> ~/.databrickscfg
-          echo "azure_client_secret = ${{ env.kvdevopsarfrmwk-clientsecret }}" >> ~/.databrickscfg
+          echo "azure_tenant_id     = ${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}" >> ~/.databrickscfg
+          echo "azure_client_id     = ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}" >> ~/.databrickscfg
+          echo "azure_client_secret = ${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}" >> ~/.databrickscfg
           cat ~/.databrickscfg
 
       - name: Get metadata from Databricks workflow Run ID
