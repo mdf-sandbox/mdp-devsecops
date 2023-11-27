@@ -136,7 +136,7 @@ jobs:
         run: |
           echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
           echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
-          echo "azure_tenant_id     = ${{ env.${AR_FRMWK_TENANT_ID_KV} }}" >> ~/.databrickscfg
+          echo "azure_tenant_id     = ${{ env.{AR_FRMWK_TENANT_ID_KV} }}" >> ~/.databrickscfg
           echo "azure_client_id     = ${{ env.kvdevopsarfrmwk-clientid }}" >> ~/.databrickscfg
           echo "azure_client_secret = ${{ env.kvdevopsarfrmwk-clientsecret }}" >> ~/.databrickscfg
           cat ~/.databrickscfg
