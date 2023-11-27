@@ -111,6 +111,29 @@ jobs:
           creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
           allow-no-subscriptions: true
 
+      - name: Azure Key Vault Secrets
+        id: azurekeyvault
+        if: ${{ inputs.run_id != '' }}
+        uses: Azure/get-keyvault-secrets@v1
+        with:
+          keyvault: ${{ env.AZURE_KEYVAULT_NAME }}
+          secrets: 'AR_FRMWK_CLIENT_ID_KV, AR_FRMWK_CLIENT_SECRET_KV, AR_FRMWK_TENANT_ID_KV, AR_FRMWK_SUBSCRIPTION_ID_KV'
+
+      - name: Create Azure Databricks configuration profile
+        run: |
+          echo "[${{ vars.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
+          echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
+          echo "azure_tenant_id     = ${{ steps.azurekeyvault.outputs.AR_FRMWK_TENANT_ID_KV }}" >> ~/.databrickscfg
+          echo "azure_client_id     = ${{ steps.azurekeyvault.outputs.AR_FRMWK_CLIENT_ID_KV }}" >> ~/.databrickscfg
+          echo "azure_client_secret = ${{ steps.azurekeyvault.outputs.AR_FRMWK_CLIENT_SECRET_KV }}" >> ~/.databrickscfg
+          cat ~/.databrickscfg
+
+      - name: Get metadata from Databricks workflow Run ID
+        if: ${{ inputs.run_id != '' }}
+        run: |
+          databricks --profile ${{ vars.DATABRICKS_PROFILE }} jobs get-run ${{ inputs.run_id }} | jq '{result_state: .state.result_state, notebook_path: .job_parameters[] | select(.name=="notebook_path") | .value, run_page_url: .run_page_url}' > run_metadata.json #TODO: ${{ vars.DATABRICKS_PROFILE }}
+          cat run_metadata.json
+
       - name: Generate and save AAD Token
         if: ${{ inputs.post_deployment_script != '["skip"]' }}
         run: |
@@ -126,10 +149,6 @@ jobs:
         run: |
           echo "POST_DEPLOYMENT_SCRIPT_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.workspace | to_entries' | jq -r '.[] | select(.key=="post_deployment_script") | .value')" >> $GITHUB_ENV
 
-      # - name: Start a terminated Spark cluster
-      #   run: |
-      #     curl -X POST --header 'content-type:application/json' --header 'authorization:Bearer ${{ env.DATABRICKS_TOKEN }}' -d '{"cluster_id": "0921-080330-m15ze66k"}' ${{ env.DATABRICKS_HOST }}/api/2.0/clusters/start --insecure -v
-
       - name: Trigger databricks notebook
         id: databricks-run
         if: ${{ inputs.post_deployment_script != '["skip"]' }}
@@ -140,7 +159,7 @@ jobs:
           databricks-token: ${{ env.DATABRICKS_TOKEN }} #TODO: Change to SP login
           run-name: "execute-post-deployment-script"
           workspace-notebook-path: "${{ env.POST_DEPLOYMENT_SCRIPT_PATH }}${{ inputs.baseline_no }}/${{ matrix.post_deployment_script }}"
-          existing-cluster-id: "1116-034613-ehxcm71j" #dp-batch-processing
+          existing-cluster-id: "0921-080330-m15ze66k" #dp-batch-processing
           # existing-cluster-id: "1002-080329-vfiifjp9" #dp_fw_developing
           notebook-params-json: >
             [
