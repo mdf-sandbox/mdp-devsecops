@@ -103,6 +103,11 @@ jobs:
           pip install jq
           pip install yq
 
+      - name: Install Databricks CLI
+        if: ${{ inputs.run_id != '' }}
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
       - name: Azure login
         if: ${{ inputs.post_deployment_script != '["skip"]' }}
         uses: azure/login@v1
