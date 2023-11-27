@@ -61,7 +61,7 @@ on:
 jobs:
   call-devops-workflow:
     name: Call DevOps Workflow
-    uses: mdf-sandbox/mdp-devsecops/.github/actions/ingestion/reusable-workflow-deploy-ing-kvsp.yml@main
+    uses: ./actions/ingestion/reusable-workflow-deploy-ing-kvsp.yml@main
     with:
       repository: ${{ github.repository }}
       ref: ${{ inputs.ref }}
