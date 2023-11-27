@@ -471,7 +471,7 @@ jobs:
             SOURCE_PATH=$(echo "$path" | jq -r '.key')
             DEST_PATH=$(echo "$path" | jq -r '.value')
             echo "Deploying files to artifact path ${DEST_PATH}..."
-            azcopy sync ".${DEST_PATH}" "https://pocadlsmdf.dfs.core.windows.net/artifact/mdf/ingestion/test_deployment${DEST_PATH}" --exclude-pattern=.gitkeep --delete-destination=true #TODO: ${{ env.ADLS_ARTIFACT_URL }}
+            azcopy sync ".${DEST_PATH}" "https://pocadlsmdf.dfs.core.windows.net/artifact/mdf/ingestion/test_sp_deployment${DEST_PATH}" --exclude-pattern=.gitkeep --delete-destination=true #TODO: ${{ env.ADLS_ARTIFACT_URL }}
             # azcopy sync ".${DEST_PATH}" "https://adlsmdfseatestfw001.dfs.core.windows.net/artifact${DEST_PATH}" --exclude-pattern=.gitkeep --delete-destination=true
           done
 
