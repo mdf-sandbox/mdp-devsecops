@@ -1,0 +1,72 @@
+name: reusable-workflow-deploy-hub
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        description: Target environment
+        required: true
+      repository:
+        type: string
+        description: Repository name
+        required: true
+      ref:
+        type: string
+        description: Branch name
+        required: true
+      baseline_no:
+        type: string
+        description: Deployment Baseline Number
+        required: true
+      post_deployment_script:
+        type: string
+        description: Post-deployment Scripts
+        required: true
+      run_id:
+        type: string
+        description: Databricks Run ID
+        required: true
+
+  # Allows you to run this workflow manually from the Action tab
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        description: Target environment
+        options:
+         - uat
+         - prod
+      repository:
+        type: string
+        description: Repository name
+        required: true
+      ref:
+        type: string
+        description: Release tag
+        required: true
+      baseline_no:
+        type: string
+        description: Deployment Baseline Number
+        required: true
+      post_deployment_script:
+        type: string
+        description: Post-deployment Scripts
+        required: true
+      run_id:
+        type: string
+        description: Databricks Run ID
+        required: true
+
+jobs:
+  call-devops-workflow:
+    name: Call DevOps Workflow
+    uses: mdf-sandbox/mdp-devsecops/.github/workflows/ingestion/reusable-workflow-deploy-ing-kvsp.yml@main
+    with:
+      repository: ${{ github.repository }}
+      ref: ${{ inputs.ref }}
+      environment: ${{ inputs.environment }}
+      baseline_no: ${{ inputs.baseline_no }}
+      post_deployment_script: ${{ inputs.post_deployment_script }}
+      run_id: ${{ inputs.run_id }}
+    secrets: inherit

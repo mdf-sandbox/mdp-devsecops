@@ -28,36 +28,6 @@ on:
         description: Databricks Run ID
         required: true
 
-  # Allows you to run this workflow manually from the Action tab
-  workflow_dispatch:
-    inputs:
-      environment:
-        type: choice
-        description: Target environment
-        options:
-         - uat
-         - prod
-      repository:
-        type: string
-        description: Repository name
-        required: true
-      ref:
-        type: string
-        description: Release tag
-        required: true
-      baseline_no:
-        type: string
-        description: Deployment Baseline Number
-        required: true
-      post_deployment_script:
-        type: string
-        description: Post-deployment Scripts
-        required: true
-      run_id:
-        type: string
-        description: Databricks Run ID
-        required: true
-
 # Use the Bash shell as default settings for all jobs in the workflow
 defaults:
   run:
