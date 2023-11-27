@@ -113,7 +113,6 @@ jobs:
         uses: azure/login@v1
         with:
           creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AR_DEVOPS_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
-          # creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
           allow-no-subscriptions: true
 
       - name: Azure Key Vault Secrets
@@ -124,23 +123,23 @@ jobs:
           keyvault: ${{ env.AZURE_KEYVAULT_NAME }}
           secrets: '${{ env.AR_FRMWK_CLIENT_ID_KV }}, ${{ env.AR_FRMWK_CLIENT_SECRET_KV }}, ${{ env.AR_FRMWK_TENANT_ID_KV }}, ${{ env.AR_FRMWK_SUBSCRIPTION_ID_KV }}'
 
-      - name: Create Azure Databricks configuration profile
-        run: |
-          echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
-          echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
-          echo "azure_tenant_id     = ${{ steps.azurekeyvault.outputs.kvdevopsarfrmwk-tenantid }}" >> ~/.databrickscfg
-          echo "azure_client_id     = ${{ steps.azurekeyvault.outputs.kvdevopsarfrmwk-clientid }}" >> ~/.databrickscfg
-          echo "azure_client_secret = ${{ steps.azurekeyvault.outputs.kvdevopsarfrmwk-clientsecret }}" >> ~/.databrickscfg
-          cat ~/.databrickscfg
-
       # - name: Create Azure Databricks configuration profile
       #   run: |
       #     echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
       #     echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
-      #     echo "azure_tenant_id     = ${{ steps.azurekeyvault.outputs.${AR_FRMWK_TENANT_ID_KV} }}" >> ~/.databrickscfg
-      #     echo "azure_client_id     = ${{ steps.azurekeyvault.outputs.${AR_FRMWK_CLIENT_ID_KV} }}" >> ~/.databrickscfg
-      #     echo "azure_client_secret = ${{ steps.azurekeyvault.outputs.${AR_FRMWK_CLIENT_SECRET_KV} }}" >> ~/.databrickscfg
+      #     echo "azure_tenant_id     = ${{ steps.azurekeyvault.outputs.kvdevopsarfrmwk-tenantid }}" >> ~/.databrickscfg
+      #     echo "azure_client_id     = ${{ steps.azurekeyvault.outputs.kvdevopsarfrmwk-clientid }}" >> ~/.databrickscfg
+      #     echo "azure_client_secret = ${{ steps.azurekeyvault.outputs.kvdevopsarfrmwk-clientsecret }}" >> ~/.databrickscfg
       #     cat ~/.databrickscfg
+
+      - name: Create Azure Databricks configuration profile
+        run: |
+          echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
+          echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
+          echo "azure_tenant_id     = ${{ env.kvdevopsarfrmwk-tenantid }}" >> ~/.databrickscfg
+          echo "azure_client_id     = ${{ env.kvdevopsarfrmwk-clientid }}" >> ~/.databrickscfg
+          echo "azure_client_secret = ${{ env.kvdevopsarfrmwk-clientsecret }}" >> ~/.databrickscfg
+          cat ~/.databrickscfg
 
       - name: Get metadata from Databricks workflow Run ID
         if: ${{ inputs.run_id != '' }}
