@@ -128,9 +128,9 @@ jobs:
         run: |
           echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
           echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
-          echo "azure_tenant_id     = ${{ steps.azurekeyvault.outputs.kvdevopsarfrmwk-tenantid }}" >> ~/.databrickscfg
+          echo "azure_tenant_id     = ${{ steps.azurekeyvault.outputs.kvdevopsarmlops-tenantid }}" >> ~/.databrickscfg
           echo "azure_client_id     = ${{ steps.azurekeyvault.outputs.kvdevopsarfrmwk-clientid }}" >> ~/.databrickscfg
-          echo "azure_client_secret = ${{ steps.azurekeyvault.outputs.kvdevopsarmlops-clientsecret }}" >> ~/.databrickscfg
+          echo "azure_client_secret = ${{ steps.azurekeyvault.outputs.kvdevopsarfrmwk-clientsecret }}" >> ~/.databrickscfg
           cat ~/.databrickscfg
 
       # - name: Create Azure Databricks configuration profile
