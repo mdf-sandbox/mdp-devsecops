@@ -115,29 +115,12 @@ jobs:
           creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AR_DEVOPS_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
           allow-no-subscriptions: true
 
-      - name: Azure Key Vault Secrets
-        id: azurekeyvault
-        if: ${{ inputs.run_id != '' }}
-        uses: Azure/get-keyvault-secrets@v1
-        with:
-          keyvault: ${{ env.AZURE_KEYVAULT_NAME }}
-          secrets: '${{ env.AR_FRMWK_CLIENT_ID_KV }}, ${{ env.AR_FRMWK_CLIENT_SECRET_KV }}, ${{ env.AR_FRMWK_TENANT_ID_KV }}, ${{ env.AR_FRMWK_SUBSCRIPTION_ID_KV }}'
-
       - name: Set environment variables
         run: |
-          echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value')" >> $GITHUB_ENV
-          echo "AR_FRMWK_CLIENT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value')" >> $GITHUB_ENV
-          echo "AR_FRMWK_CLIENT_SECRET_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_SECRET_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value')" >> $GITHUB_ENV
-
-
-      # - name: Create Azure Databricks configuration profile
-      #   run: |
-      #     echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
-      #     echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
-      #     echo "azure_tenant_id     = ${{ steps.azurekeyvault.outputs.kvdevopsarfrmwk-tenantid }}" >> ~/.databrickscfg
-      #     echo "azure_client_id     = ${{ steps.azurekeyvault.outputs.kvdevopsarfrmwk-clientid }}" >> ~/.databrickscfg
-      #     echo "azure_client_secret = ${{ steps.azurekeyvault.outputs.kvdevopsarfrmwk-clientsecret }}" >> ~/.databrickscfg
-      #     cat ~/.databrickscfg
+          echo "AR_FRMWK_CLIENT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_CLIENT_SECRET_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_SECRET_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
 
       - name: Create Azure Databricks configuration profile
         run: |
@@ -147,6 +130,23 @@ jobs:
           echo "azure_client_id     = ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}" >> ~/.databrickscfg
           echo "azure_client_secret = ${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}" >> ~/.databrickscfg
           cat ~/.databrickscfg
+
+      # - name: Azure Key Vault Secrets
+      #   id: azurekeyvault
+      #   if: ${{ inputs.run_id != '' }}
+      #   uses: Azure/get-keyvault-secrets@v1
+      #   with:
+      #     keyvault: ${{ env.AZURE_KEYVAULT_NAME }}
+      #     secrets: '${{ env.AR_FRMWK_CLIENT_ID_KV }}, ${{ env.AR_FRMWK_CLIENT_SECRET_KV }}, ${{ env.AR_FRMWK_TENANT_ID_KV }}, ${{ env.AR_FRMWK_SUBSCRIPTION_ID_KV }}'
+
+      # - name: Create Azure Databricks configuration profile
+      #   run: |
+      #     echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
+      #     echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
+      #     echo "azure_tenant_id     = ${{ steps.azurekeyvault.outputs.kvdevopsarfrmwk-tenantid }}" >> ~/.databrickscfg
+      #     echo "azure_client_id     = ${{ steps.azurekeyvault.outputs.kvdevopsarfrmwk-clientid }}" >> ~/.databrickscfg
+      #     echo "azure_client_secret = ${{ steps.azurekeyvault.outputs.kvdevopsarfrmwk-clientsecret }}" >> ~/.databrickscfg
+      #     cat ~/.databrickscfg
 
       - name: Get metadata from Databricks workflow Run ID
         if: ${{ inputs.run_id != '' }}
@@ -158,11 +158,11 @@ jobs:
         if: ${{ inputs.post_deployment_script != '["skip"]' }}
         run: |
           echo "DATABRICKS_TOKEN=$(curl -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
-            https://login.microsoftonline.com/2aa3892b-2638-4281-a7e3-9623e880e79e/oauth2/v2.0/token \
-            -d 'client_id=38f6c759-dee8-41ae-9cad-728b3827b76c' \
+            https://login.microsoftonline.com/${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}/oauth2/v2.0/token \
+            -d 'client_id=${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}' \
             -d 'grant_type=client_credentials' \
             -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
-            -d 'client_secret=${{ secrets.AR_FRMWK_CLIENT_SECRET_TEST }}' |  jq -r  '.access_token')" >> $GITHUB_ENV
+            -d 'client_secret=${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}' |  jq -r  '.access_token')" >> $GITHUB_ENV
 
       - name: Set environment variables
         if: ${{ inputs.post_deployment_script != '["skip"]' }}
@@ -175,12 +175,10 @@ jobs:
         uses: databricks/run-notebook@v0
         with:
           databricks-host: ${{ env.DATABRICKS_HOST }}
-          # databricks-token: ${{ secrets.AZURE_DATABRICKS_PAT }} #TODO: Change to SP login
           databricks-token: ${{ env.DATABRICKS_TOKEN }} #TODO: Change to SP login
           run-name: "execute-post-deployment-script"
           workspace-notebook-path: "${{ env.POST_DEPLOYMENT_SCRIPT_PATH }}${{ inputs.baseline_no }}/${{ matrix.post_deployment_script }}"
-          existing-cluster-id: "0921-080330-m15ze66k" #dp-batch-processing
-          # existing-cluster-id: "1002-080329-vfiifjp9" #dp_fw_developing
+          existing-cluster-id: ${{ env.DATABRICKS_CLUSTER_ID }}
           notebook-params-json: >
             [
               {
@@ -191,7 +189,7 @@ jobs:
           access-control-list-json: >
             [
               {
-                "user_name": "38f6c759-dee8-41ae-9cad-728b3827b76c",
+                "user_name": "${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}",
                 "permission_level": "IS_OWNER"
               }
             ]
