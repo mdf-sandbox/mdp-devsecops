@@ -64,439 +64,9 @@ defaults:
     shell: bash
 
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-20.04
-    strategy:
-      # fail-fast: true
-      max-parallel: 1 #To define the maximum number of concurrent jobs
-      matrix:
-        post_deployment_script: ${{ fromJSON(inputs.post_deployment_script) }}
-
-    steps:
-      - name: Checkout main branch of DevSecOps repository
-        if: ${{ inputs.post_deployment_script != '["skip"]' }}
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
-          ref: main
-          fetch-depth: 0
-
-      - name: Load environment variables from ${{ inputs.environment }} dotenv file
-        if: ${{ inputs.post_deployment_script != '["skip"]' }}
-        run: |
-          cat ./dotenv/${{ inputs.environment }}.env >> $GITHUB_ENV
-
-      - name: Checkout ${{ inputs.ref }} of ${{ inputs.repository }} repository
-        if: ${{ inputs.post_deployment_script != '["skip"]' }}
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ inputs.repository }}
-          ref: ${{ inputs.ref }}
-          fetch-depth: 0
-          token: ${{ secrets.GHE_DEVOPS_TOKEN }}
-
-      - name: Install pip and etc
-        if: ${{ inputs.post_deployment_script != '["skip"]' }}
-        run: |
-          pip install --upgrade pip
-          pip install jq
-          pip install yq
-
-      - name: Install Databricks CLI
-        if: ${{ inputs.run_id != '' }}
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
-
-      - name: Azure login
-        if: ${{ inputs.post_deployment_script != '["skip"]' }}
-        uses: azure/login@v1
-        with:
-          creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AR_DEVOPS_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
-          allow-no-subscriptions: true
-
-      - name: Set environment variables
-        run: |
-          echo "AR_FRMWK_CLIENT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
-          echo "AR_FRMWK_CLIENT_SECRET_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_SECRET_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
-          echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
-          echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
-
-      - name: Create Azure Databricks configuration profile
-        run: |
-          echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
-          echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
-          echo "azure_tenant_id     = ${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}" >> ~/.databrickscfg
-          echo "azure_client_id     = ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}" >> ~/.databrickscfg
-          echo "azure_client_secret = ${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}" >> ~/.databrickscfg
-          cat ~/.databrickscfg
-
-      # - name: Azure Key Vault Secrets
-      #   id: azurekeyvault
-      #   if: ${{ inputs.run_id != '' }}
-      #   uses: Azure/get-keyvault-secrets@v1
-      #   with:
-      #     keyvault: ${{ env.AZURE_KEYVAULT_NAME }}
-      #     secrets: '${{ env.AR_FRMWK_CLIENT_ID_KV }}, ${{ env.AR_FRMWK_CLIENT_SECRET_KV }}, ${{ env.AR_FRMWK_TENANT_ID_KV }}, ${{ env.AR_FRMWK_SUBSCRIPTION_ID_KV }}'
-
-      # - name: Create Azure Databricks configuration profile
-      #   run: |
-      #     echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
-      #     echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
-      #     echo "azure_tenant_id     = ${{ steps.azurekeyvault.outputs.kvdevopsarfrmwk-tenantid }}" >> ~/.databrickscfg
-      #     echo "azure_client_id     = ${{ steps.azurekeyvault.outputs.kvdevopsarfrmwk-clientid }}" >> ~/.databrickscfg
-      #     echo "azure_client_secret = ${{ steps.azurekeyvault.outputs.kvdevopsarfrmwk-clientsecret }}" >> ~/.databrickscfg
-      #     cat ~/.databrickscfg
-
-      - name: Get metadata from Databricks workflow Run ID
-        if: ${{ inputs.run_id != '' }}
-        run: |
-          databricks --profile ${{ env.DATABRICKS_PROFILE }} jobs get-run ${{ inputs.run_id }} | jq '{result_state: .state.result_state, notebook_path: .job_parameters[] | select(.name=="notebook_path") | .value, run_page_url: .run_page_url}' > run_metadata.json #TODO: ${{ vars.DATABRICKS_PROFILE }}
-          cat run_metadata.json
-
-      - name: Generate and save AAD Token
-        if: ${{ inputs.post_deployment_script != '["skip"]' }}
-        run: |
-          echo "DATABRICKS_TOKEN=$(curl -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
-            https://login.microsoftonline.com/${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}/oauth2/v2.0/token \
-            -d 'client_id=${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}' \
-            -d 'grant_type=client_credentials' \
-            -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
-            -d 'client_secret=${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}' |  jq -r  '.access_token')" >> $GITHUB_ENV
-
-      - name: Set environment variables
-        if: ${{ inputs.post_deployment_script != '["skip"]' }}
-        run: |
-          echo "POST_DEPLOYMENT_SCRIPT_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.workspace | to_entries' | jq -r '.[] | select(.key=="post_deployment_script") | .value')" >> $GITHUB_ENV
-
-      - name: Trigger databricks notebook
-        id: databricks-run
-        if: ${{ inputs.post_deployment_script != '["skip"]' }}
-        uses: databricks/run-notebook@v0
-        with:
-          databricks-host: ${{ env.DATABRICKS_HOST }}
-          databricks-token: ${{ env.DATABRICKS_TOKEN }} #TODO: Change to SP login
-          run-name: "execute-post-deployment-script"
-          workspace-notebook-path: "${{ env.POST_DEPLOYMENT_SCRIPT_PATH }}${{ inputs.baseline_no }}/${{ matrix.post_deployment_script }}"
-          existing-cluster-id: ${{ env.DATABRICKS_CLUSTER_ID }}
-          notebook-params-json: >
-            [
-              {
-                "key": "environment",
-                "value": "${{ inputs.environment }}"
-              }
-            ]
-          access-control-list-json: >
-            [
-              {
-                "user_name": "${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}",
-                "permission_level": "IS_OWNER"
-              }
-            ]
-          timeout-seconds: 900 #15 Minutes
-
-      - name: Check Run Output
-        if: ${{ inputs.post_deployment_script != '["skip"]' }}
-        run: |
-          echo ${{ steps.databricks-run.outputs.notebook-output }}
-
-  # check-approval-gate:
-  #   name: Check Approval Gate
+  # test:
+  #   name: Test
   #   runs-on: ubuntu-20.04
-  #   outputs:
-  #     run_result_state: ${{ steps.op1.outputs.RUN_RESULT_STATE }}
-  #     run_notebook_path: ${{ steps.op1.outputs.RUN_NOTEBOOK_PATH }}
-  #     run_page_url: ${{ steps.op1.outputs.RUN_PAGE_URL }}
-  #     approve_status: ${{ steps.op2.outputs.approve_status }}
-
-  #   steps:
-  #     - name: Checkout main branch of DevOps repository
-  #       if: ${{ inputs.run_id != '' }}
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
-  #         ref: main
-  #         fetch-depth: 0
-
-  #     - name: Set environment variables
-  #       if: ${{ inputs.run_id != '' }}
-  #       env:
-  #         REPOSITORY_VAR: ${{ inputs.repository }}
-  #       run: |
-  #         # echo "APPROVAL_GATE_ENVIRONMENT=${{ inputs.environment == 'uat' && 'sit' || 'uat' }}" >> $GITHUB_ENV
-  #         # echo "APPROVAL_GATE_PATH=${{ inputs.environment == 'uat' && '/Shared/MDF/$REPOSITORY_VAR/sit' || '/Shared/MDF/$REPOSITORY_VAR/uat' }}" >> $GITHUB_ENV
-  #         echo "APPROVAL_GATE_ENVIRONMENT=dev" >> $GITHUB_ENV
-  #         echo "APPROVAL_GATE_PATH=/test/mdp/unit/ingestion_area1/" >> $GITHUB_ENV #HARDCODE FOR TEST
-
-  #     - name: Load environment variables from ${{ env.APPROVAL_GATE_ENVIRONMENT }} dotenv file
-  #       if: ${{ inputs.run_id != '' }}
-  #       run: |
-  #         cat ./dotenv/${{ env.APPROVAL_GATE_ENVIRONMENT }}.env >> $GITHUB_ENV
-
-  #     - name: Install pip and etc
-  #       if: ${{ inputs.run_id != '' }}
-  #       run: |
-  #         pip install --upgrade pip
-  #         pip install jq
-  #         pip install yq
-
-  #     - name: Install Databricks CLI
-  #       if: ${{ inputs.run_id != '' }}
-  #       run: |
-  #         curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
-
-  #     - name: Azure login
-  #       if: ${{ inputs.run_id != '' }}
-  #       uses: azure/login@v1
-  #       with:
-  #         creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AR_DEVOPS_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
-
-  #     - name: Azure Key Vault Secrets
-  #       id: azurekeyvault
-  #       if: ${{ inputs.run_id != '' }}
-  #       uses: Azure/get-keyvault-secrets@v1
-  #       with:
-  #         keyvault: ${{ env.AZURE_KEYVAULT_NAME }}
-  #         secrets: 'AR_FRMWK_CLIENT_ID_KV, AR_FRMWK_CLIENT_SECRET_KV, AR_FRMWK_TENANT_ID_KV, AR_FRMWK_SUBSCRIPTION_ID_KV'
-
-  #     - name: Create Azure Databricks configuration profile
-  #       run: |
-  #         echo "[${{ vars.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
-  #         echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
-  #         echo "azure_tenant_id     = ${{ steps.azurekeyvault.outputs.AR_FRMWK_TENANT_ID_KV }}" >> ~/.databrickscfg
-  #         echo "azure_client_id     = ${{ steps.azurekeyvault.outputs.AR_FRMWK_CLIENT_ID_KV }}" >> ~/.databrickscfg
-  #         echo "azure_client_secret = ${{ steps.azurekeyvault.outputs.AR_FRMWK_CLIENT_SECRET_KV }}" >> ~/.databrickscfg
-  #         cat ~/.databrickscfg
-
-  #     - name: Get metadata from Databricks workflow Run ID
-  #       if: ${{ inputs.run_id != '' }}
-  #       run: |
-  #         databricks --profile ${{ vars.DATABRICKS_PROFILE }} jobs get-run ${{ inputs.run_id }} | jq '{result_state: .state.result_state, notebook_path: .job_parameters[] | select(.name=="notebook_path") | .value, run_page_url: .run_page_url}' > run_metadata.json #TODO: ${{ vars.DATABRICKS_PROFILE }}
-  #         cat run_metadata.json
-
-  #     - name: Set environment variables from metadata
-  #       id: op1
-  #       if: ${{ inputs.run_id != '' }}
-  #       run: |
-  #         echo "RUN_RESULT_STATE=$(jq -r '.result_state' run_metadata.json)" >> $GITHUB_OUTPUT
-  #         echo "RUN_NOTEBOOK_PATH=$(jq -r '.notebook_path' run_metadata.json)" >> $GITHUB_OUTPUT
-  #         echo "RUN_PAGE_URL=$(jq -r '.run_page_url' run_metadata.json)" >> $GITHUB_OUTPUT
-
-  #     - name: Pending Approval
-  #       id: op2
-  #       if: ${{ (inputs.run_id != '') && (!startsWith(steps.op1.outputs.RUN_NOTEBOOK_PATH, env.APPROVAL_GATE_PATH) || (steps.op1.outputs.RUN_RESULT_STATE != 'SUCCESS')) }}
-  #       run: |
-  #         echo "::error::Please check the result of workflow run id '${{ inputs.run_id }}' from this url '${{ steps.op1.outputs.RUN_PAGE_URL }}'"
-  #         echo "approve_status=pending" >> $GITHUB_OUTPUT
-  #         exit 1
-
-  # deploy-databricks-bundle:
-  #   name: Deploy Databricks Bundle to ${{ inputs.environment }} Environment
-  #   runs-on: ubuntu-20.04
-  #   needs: [check-approval-gate]
-  #   outputs:
-  #     work_item_id: ${{ steps.op1.outputs.work_item_id }}
-
-  #   steps:
-  #     - name: Checkout main branch of DevSecOps repository
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
-  #         ref: main
-  #         fetch-depth: 0
-
-  #     - name: Load environment variables from ${{ inputs.environment }} dotenv file
-  #       run: |
-  #         cat ./dotenv/${{ inputs.environment }}.env >> $GITHUB_ENV
-
-  #     - name: Checkout ${{ inputs.ref }} of ${{ inputs.repository }} repository
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: ${{ inputs.repository }}
-  #         ref: ${{ inputs.ref }}
-  #         fetch-depth: 0
-  #         token: ${{ secrets.GHE_DEVOPS_TOKEN }}
-
-  #     - name: Load environment variables from cicd env file
-  #       run: |
-  #         cat ./deployment/service/azure_devops/azure_devops_boards.env >> $GITHUB_ENV
-
-  #     - name: Set up Python
-  #       uses: actions/setup-python@v4
-  #       with:
-  #         python-version: ${{ vars.PYTHON_VERSION_VAR }}
-
-  #     - name: Install Poetry
-  #       uses: snok/install-poetry@v1
-  #       with:
-  #         version: ${{ vars.POETRY_VERSION_VAR }}
-
-  #     - name: Install pip and etc
-  #       run: |
-  #         pip install --upgrade pip
-  #         pip install jq
-  #         pip install yq
-
-  #     - name: Install Databricks CLI
-  #       run: |
-  #         curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
-
-  #     - name: Azure login
-  #       if: ${{ inputs.run_id != '' }}
-  #       uses: azure/login@v1
-  #       with:
-  #         creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AR_DEVOPS_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
-
-  #     - name: Azure Key Vault Secrets
-  #       id: azurekeyvault
-  #       if: ${{ inputs.run_id != '' }}
-  #       uses: Azure/get-keyvault-secrets@v1
-  #       with:
-  #         keyvault: ${{ env.AZURE_KEYVAULT_NAME }}
-  #         secrets: 'AR_FRMWK_CLIENT_ID_KV, AR_FRMWK_CLIENT_SECRET_KV, AR_FRMWK_TENANT_ID_KV, AR_FRMWK_SUBSCRIPTION_ID_KV'
-
-  #     - name: Create Azure Databricks configuration profile
-  #       run: |
-  #         echo "[${{ vars.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
-  #         echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
-  #         echo "azure_tenant_id     = ${{ steps.azurekeyvault.outputs.AR_FRMWK_TENANT_ID_KV }}" >> ~/.databrickscfg
-  #         echo "azure_client_id     = ${{ steps.azurekeyvault.outputs.AR_FRMWK_CLIENT_ID_KV }}" >> ~/.databrickscfg
-  #         echo "azure_client_secret = ${{ steps.azurekeyvault.outputs.AR_FRMWK_CLIENT_SECRET_KV }}" >> ~/.databrickscfg
-  #         cat ~/.databrickscfg
-
-  #     - name: Set environment variables
-  #       run: |
-  #         echo "DEFAULT_WORKFLOW_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
-  #         echo "REPOSITORY=${{ inputs.repository }}" >> $GITHUB_ENV
-  #         echo "APPROVAL_GATE_PATH=/Shared/MDF/${{ inputs.repository }}/${{ inputs.environment }}" >> $GITHUB_ENV
-  #         echo "SCRIPTS_PATH=/Shared/MDF/${{ inputs.repository }}/scripts" >> $GITHUB_ENV
-  #         echo "PACKAGE_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
-  #         echo "CURRENT_VERSION=$(poetry version --dry-run -s)" >> $GITHUB_ENV
-  #         echo "WORKSPACE_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.workspace | to_entries')" >> $GITHUB_ENV
-
-  #     - name: Override WORKSPACE_PATH variable
-  #       run: |
-  #         case ${{ inputs.environment }} in
-  #           "dev")
-  #             echo "WORKSPACE_PATH=$(echo '${{ env.WORKSPACE_PATH }}' |  jq -c ['.[] | select(.key | contains("sit_test") or contains("uat_test") | not )'])" >> $GITHUB_ENV
-  #           ;;
-  #           "sit")
-  #             echo "WORKSPACE_PATH=$(echo '${{ env.WORKSPACE_PATH }}' |  jq -c ['.[] | select(.key | contains("unit_test") or contains("uat_test") | not )'])" >> $GITHUB_ENV
-  #           ;;
-  #           "uat")
-  #             echo "WORKSPACE_PATH=$(echo '${{ env.WORKSPACE_PATH }}' |  jq -c ['.[] | select(.key | contains("unit_test") or contains("sit_test") | not )'])" >> $GITHUB_ENV
-  #           ;;
-  #           "prod")
-  #             echo "WORKSPACE_PATH=$(echo '${{ env.WORKSPACE_PATH }}' |  jq -c ['.[] | select(.key | contains("_test") | not )'])" >> $GITHUB_ENV
-  #           ;;
-  #         esac
-
-  #     - name: Delete files from the destination
-  #       run: |
-  #         for path in $(echo '${{ env.WORKSPACE_PATH }}' | jq -c '.[]'); do
-  #           SOURCE_PATH=$(echo "$path" | jq -r '.key')
-  #           DEST_PATH=$(echo "$path" | jq -r '.value')
-  #           echo "Creating directory in workspace path ${DEST_PATH}..."
-  #           databricks --profile ${{ vars.DATABRICKS_PROFILE }} workspace mkdirs ${DEST_PATH}
-  #           echo "Listing files in workspace path ${DEST_PATH}..."
-  #           databricks --profile ${{ vars.DATABRICKS_PROFILE }} workspace list ${DEST_PATH}
-  #           if [[ ${SOURCE_PATH} != *"_test" ]]; then
-  #             echo "Deleting files in workspace path ${DEST_PATH}..."
-  #             databricks --profile ${{ vars.DATABRICKS_PROFILE }} workspace delete ${DEST_PATH} --recursive
-  #           fi
-  #         done
-
-  #     - name: Validate the bundle configuration files
-  #       run: |
-  #         databricks --profile ${{ vars.DATABRICKS_PROFILE }} bundle validate
-
-  #     - name: Deploy the bundle
-  #       run: |
-  #         databricks --profile ${{ vars.DATABRICKS_PROFILE }} bundle deploy
-
-  #     - name: Set job outputs
-  #       id: op1
-  #       run: |
-  #         echo "work_item_id=$(echo ${{ env.WORK_ITEM_ID }})" >> $GITHUB_OUTPUT
-
-  # deploy-files-to-volumes:
-  #   name:  Deploy Files to Databricks Volumes
-  #   runs-on: ubuntu-20.04
-  #   needs: [check-approval-gate]
-
-  #   steps:
-  #     - name: Checkout main branch of DevSecOps repository
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
-  #         ref: main
-  #         fetch-depth: 0
-
-  #     - name: Load environment variables from ${{ inputs.environment }} dotenv file
-  #       run: |
-  #         cat ./dotenv/${{ inputs.environment }}.env >> $GITHUB_ENV
-
-  #     - name: Checkout ${{ inputs.ref }} of ${{ inputs.repository }} repository
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: ${{ inputs.repository }}
-  #         ref: ${{ inputs.ref }}
-  #         fetch-depth: 0
-  #         token: ${{ secrets.GHE_DEVOPS_TOKEN }}
-
-  #     - name: Install pip and etc
-  #       run: |
-  #         pip install --upgrade pip
-  #         pip install jq
-  #         pip install yq
-
-  #     - name: Install AzCopy
-  #       run: |
-  #         wget -O azcopy_v10.tar.gz https://aka.ms/downloadazcopy-v10-linux && tar -xf azcopy_v10.tar.gz --strip-components=1
-
-  #     - name: Azure login
-  #       if: ${{ inputs.run_id != '' }}
-  #       uses: azure/login@v1
-  #       with:
-  #         creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AR_DEVOPS_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
-
-  #     - name: Azure Key Vault Secrets
-  #       id: azurekeyvault
-  #       if: ${{ inputs.run_id != '' }}
-  #       uses: Azure/get-keyvault-secrets@v1
-  #       with:
-  #         keyvault: ${{ env.AZURE_KEYVAULT_NAME }}
-  #         secrets: 'AR_FRMWK_CLIENT_ID_KV, AR_FRMWK_CLIENT_SECRET_KV, AR_FRMWK_TENANT_ID_KV, AR_FRMWK_SUBSCRIPTION_ID_KV'
-
-  #     - name: Set environment variables
-  #       run: |
-  #         echo "DEFAULT_WORKFLOW_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
-  #         echo "REPOSITORY=${{ inputs.repository }}" >> $GITHUB_ENV
-  #         echo "APPROVAL_GATE_PATH=/Shared/MDF/${{ inputs.repository }}/${{ inputs.environment }}" >> $GITHUB_ENV
-  #         echo "SCRIPTS_PATH=/Shared/MDF/${{ inputs.repository }}/scripts" >> $GITHUB_ENV
-  #         echo "PACKAGE_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
-  #         echo "CURRENT_VERSION=$(poetry version --dry-run -s)" >> $GITHUB_ENV
-  #         echo "ADLS_ARTIFACT_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.adls_artifact | to_entries')" >> $GITHUB_ENV
-  #         echo "AZCOPY_AUTO_LOGIN_TYPE=SPN" >> $GITHUB_ENV
-  #         echo "AZCOPY_SPA_APPLICATION_ID=${{ steps.azurekeyvault.outputs.AR_FRMWK_CLIENT_ID_KV }}" >> $GITHUB_ENV
-  #         echo "AZCOPY_SPA_CLIENT_SECRET=${{ steps.azurekeyvault.outputs.AR_FRMWK_CLIENT_SECRET_KV }}" >> $GITHUB_ENV
-  #         echo "AZCOPY_TENANT_ID=${{ steps.azurekeyvault.outputs.AR_FRMWK_TENANT_ID_KV }}" >> $GITHUB_ENV
-
-  #     - name: Deploy Files to Databricks Volumes
-  #       run: |
-  #         for path in $(echo '${{ env.ADLS_ARTIFACT_PATH }}' | jq -c '.[]'); do
-  #           SOURCE_PATH=$(echo "$path" | jq -r '.key')
-  #           DEST_PATH=$(echo "$path" | jq -r '.value')
-  #           echo "Deploying files to artifact path ${DEST_PATH}..."
-  #           azcopy sync ".${DEST_PATH}" "https://pocadlsmdf.dfs.core.windows.net/artifact/mdf/ingestion/test_deployment${DEST_PATH}" --exclude-pattern=.gitkeep --delete-destination=true
-  #           # azcopy sync ".${DEST_PATH}" "https://adlsmdfseatestfw001.dfs.core.windows.net/artifact${DEST_PATH}" --exclude-pattern=.gitkeep --delete-destination=true
-  #         done
-
-  # execute-post-deployment-script:
-  #   name: Execute Post-deployment Script
-  #   runs-on: ubuntu-20.04
-  #   needs: [deploy-databricks-bundle, deploy-files-to-volumes]
-  #   # needs: [deploy-databricks-bundle] #TODO: REMOVE
   #   strategy:
   #     # fail-fast: true
   #     max-parallel: 1 #To define the maximum number of concurrent jobs
@@ -533,33 +103,54 @@ jobs:
   #         pip install jq
   #         pip install yq
 
-  #     - name: Azure login
+  #     - name: Install Databricks CLI
   #       if: ${{ inputs.run_id != '' }}
+  #       run: |
+  #         curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+  #     - name: Azure login
+  #       if: ${{ inputs.post_deployment_script != '["skip"]' }}
   #       uses: azure/login@v1
   #       with:
   #         creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AR_DEVOPS_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
+  #         allow-no-subscriptions: true
 
-  #     - name: Azure Key Vault Secrets
-  #       id: azurekeyvault
+  #     - name: Retrive Secrets from Azure Key Vault
+  #       run: |
+  #         echo "AR_FRMWK_CLIENT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+  #         echo "AR_FRMWK_CLIENT_SECRET_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_SECRET_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+  #         echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+  #         echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+
+  #     - name: Create Azure Databricks configuration profile
+  #       run: |
+  #         echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
+  #         echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
+  #         echo "azure_tenant_id     = ${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}" >> ~/.databrickscfg
+  #         echo "azure_client_id     = ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}" >> ~/.databrickscfg
+  #         echo "azure_client_secret = ${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}" >> ~/.databrickscfg
+  #         cat ~/.databrickscfg
+
+  #     - name: Get metadata from Databricks workflow Run ID
   #       if: ${{ inputs.run_id != '' }}
-  #       uses: Azure/get-keyvault-secrets@v1
-  #       with:
-  #         keyvault: ${{ env.AZURE_KEYVAULT_NAME }}
-  #         secrets: 'AR_FRMWK_CLIENT_ID_KV, AR_FRMWK_CLIENT_SECRET_KV, AR_FRMWK_TENANT_ID_KV, AR_FRMWK_SUBSCRIPTION_ID_KV'
+  #       run: |
+  #         databricks --profile ${{ env.DATABRICKS_PROFILE }} jobs get-run ${{ inputs.run_id }} | jq '{result_state: .state.result_state, notebook_path: .job_parameters[] | select(.name=="notebook_path") | .value, run_page_url: .run_page_url}' > run_metadata.json #TODO: ${{ env.DATABRICKS_PROFILE }}
+  #         cat run_metadata.json
+
+  #     - name: Generate and save AAD Token
+  #       if: ${{ inputs.post_deployment_script != '["skip"]' }}
+  #       run: |
+  #         echo "DATABRICKS_TOKEN=$(curl -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
+  #           https://login.microsoftonline.com/${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}/oauth2/v2.0/token \
+  #           -d 'client_id=${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}' \
+  #           -d 'grant_type=client_credentials' \
+  #           -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
+  #           -d 'client_secret=${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}' |  jq -r  '.access_token')" >> $GITHUB_ENV
 
   #     - name: Set environment variables
   #       if: ${{ inputs.post_deployment_script != '["skip"]' }}
   #       run: |
   #         echo "POST_DEPLOYMENT_SCRIPT_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.workspace | to_entries' | jq -r '.[] | select(.key=="post_deployment_script") | .value')" >> $GITHUB_ENV
-
-  #     - name: Generate and save AAD Token
-  #       run: |
-  #         echo "DATABRICKS_TOKEN=$(curl -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
-  #           https://login.microsoftonline.com/${{ steps.azurekeyvault.outputs.AR_FRMWK_TENANT_ID_KV }}/oauth2/v2.0/token \
-  #           -d 'client_id=${{ steps.azurekeyvault.outputs.AR_FRMWK_CLIENT_ID_KV }}' \
-  #           -d 'grant_type=client_credentials' \
-  #           -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
-  #           -d 'client_secret=${{ steps.azurekeyvault.outputs.AR_FRMWK_CLIENT_SECRET_KV }}' |  jq -r  '.access_token')" >> $GITHUB_ENV
 
   #     - name: Trigger databricks notebook
   #       id: databricks-run
@@ -567,12 +158,10 @@ jobs:
   #       uses: databricks/run-notebook@v0
   #       with:
   #         databricks-host: ${{ env.DATABRICKS_HOST }}
-  #         # databricks-token: ${{ secrets.AZURE_DATABRICKS_PAT }} #TODO: Change to SP login
-  #         databricks-token: ${{ secrets.DATABRICKS_TOKEN }} #TODO: Change to SP login
+  #         databricks-token: ${{ env.DATABRICKS_TOKEN }}
   #         run-name: "execute-post-deployment-script"
   #         workspace-notebook-path: "${{ env.POST_DEPLOYMENT_SCRIPT_PATH }}${{ inputs.baseline_no }}/${{ matrix.post_deployment_script }}"
-  #         # existing-cluster-id: "0921-080330-m15ze66k" #dp-batch-processing
-  #         existing-cluster-id: "1002-080329-vfiifjp9" #dp_fw_developing
+  #         existing-cluster-id: ${{ env.DATABRICKS_CLUSTER_ID }}
   #         notebook-params-json: >
   #           [
   #             {
@@ -583,7 +172,7 @@ jobs:
   #         access-control-list-json: >
   #           [
   #             {
-  #               "user_name": "a.hongtrakulchai@accenture.com",
+  #               "user_name": "${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}",
   #               "permission_level": "IS_OWNER"
   #             }
   #           ]
@@ -594,27 +183,420 @@ jobs:
   #       run: |
   #         echo ${{ steps.databricks-run.outputs.notebook-output }}
 
-  # update-work-item:
-  #   name: Update work item on Azure Boards
-  #   runs-on: ubuntu-20.04
-  #   needs: [check-approval-gate, deploy-databricks-bundle, deploy-files-to-volumes, execute-post-deployment-script]
-  #   if: ${{ inputs.environment != 'dev' }}
-  #   steps:
-  #     - name: Checkout main branch of DevSecOps repository
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
-  #         ref: main
-  #         fetch-depth: 0
+  check-approval-gate:
+    name: Check Approval Gate
+    runs-on: ubuntu-20.04
+    outputs:
+      run_result_state: ${{ steps.op1.outputs.RUN_RESULT_STATE }}
+      run_notebook_path: ${{ steps.op1.outputs.RUN_NOTEBOOK_PATH }}
+      run_page_url: ${{ steps.op1.outputs.RUN_PAGE_URL }}
+      approve_status: ${{ steps.op2.outputs.approve_status }}
 
-  #     - name: Update a work item on Azure Boards
-  #       uses: ./custom-actions/azure-devops-boards/update-work-item
-  #       with:
-  #         environment: ${{ inputs.environment }}
-  #         work_item_id: ${{ needs.deploy-databricks-bundle.outputs.work_item_id }}
-  #         board_column: '${{ inputs.environment }} Deployment'
-  #         token: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO ${{ secrets.AZURE_DEVOPS_TOKEN }}
-  #         run_id: ${{ inputs.run_id }}
-  #         run_result_state: ${{ needs.check-approval-gate.outputs.run_result_state }}
-  #         run_notebook_path: ${{ needs.check-approval-gate.outputs.run_notebook_path }}
-  #         run_page_url: ${{ needs.check-approval-gate.outputs.run_page_url }}
+    steps:
+      - name: Checkout main branch of DevOps repository
+        if: ${{ inputs.run_id != '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
+          ref: main
+          fetch-depth: 0
+
+      - name: Set environment variables
+        if: ${{ inputs.run_id != '' }}
+        env:
+          REPOSITORY_VAR: ${{ inputs.repository }}
+        run: |
+          # echo "APPROVAL_GATE_ENVIRONMENT=${{ inputs.environment == 'uat' && 'sit' || 'uat' }}" >> $GITHUB_ENV
+          # echo "APPROVAL_GATE_PATH=${{ inputs.environment == 'uat' && '/Shared/MDF/$REPOSITORY_VAR/sit' || '/Shared/MDF/$REPOSITORY_VAR/uat' }}" >> $GITHUB_ENV
+          echo "APPROVAL_GATE_ENVIRONMENT=dev" >> $GITHUB_ENV
+          echo "APPROVAL_GATE_PATH=/test/mdp/unit/ingestion_area1/" >> $GITHUB_ENV #HARDCODE FOR TEST
+
+      - name: Load environment variables from ${{ env.APPROVAL_GATE_ENVIRONMENT }} dotenv file
+        if: ${{ inputs.run_id != '' }}
+        run: |
+          cat ./dotenv/${{ env.APPROVAL_GATE_ENVIRONMENT }}.env >> $GITHUB_ENV
+
+      - name: Install pip and etc
+        if: ${{ inputs.run_id != '' }}
+        run: |
+          pip install --upgrade pip
+          pip install jq
+          pip install yq
+
+      - name: Install Databricks CLI
+        if: ${{ inputs.run_id != '' }}
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+      - name: Azure login
+        if: ${{ inputs.run_id != '' }}
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AR_DEVOPS_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
+          allow-no-subscriptions: true
+
+      - name: Retrive Secrets from Azure Key Vault
+        if: ${{ inputs.run_id != '' }}
+        run: |
+          echo "AR_FRMWK_CLIENT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_CLIENT_SECRET_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_SECRET_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+
+      - name: Create Azure Databricks configuration profile
+        if: ${{ inputs.run_id != '' }}
+        run: |
+          echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
+          echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
+          echo "azure_tenant_id     = ${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}" >> ~/.databrickscfg
+          echo "azure_client_id     = ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}" >> ~/.databrickscfg
+          echo "azure_client_secret = ${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}" >> ~/.databrickscfg
+          cat ~/.databrickscfg
+
+      - name: Get metadata from Databricks workflow Run ID
+        if: ${{ inputs.run_id != '' }}
+        run: |
+          databricks --profile ${{ env.DATABRICKS_PROFILE }} jobs get-run ${{ inputs.run_id }} | jq '{result_state: .state.result_state, notebook_path: .job_parameters[] | select(.name=="notebook_path") | .value, run_page_url: .run_page_url}' > run_metadata.json #TODO: ${{ env.DATABRICKS_PROFILE }}
+          cat run_metadata.json
+
+      - name: Set environment variables from metadata
+        id: op1
+        if: ${{ inputs.run_id != '' }}
+        run: |
+          echo "RUN_RESULT_STATE=$(jq -r '.result_state' run_metadata.json)" >> $GITHUB_OUTPUT
+          echo "RUN_NOTEBOOK_PATH=$(jq -r '.notebook_path' run_metadata.json)" >> $GITHUB_OUTPUT
+          echo "RUN_PAGE_URL=$(jq -r '.run_page_url' run_metadata.json)" >> $GITHUB_OUTPUT
+
+      - name: Pending Approval
+        id: op2
+        if: ${{ (inputs.run_id != '') && (!startsWith(steps.op1.outputs.RUN_NOTEBOOK_PATH, env.APPROVAL_GATE_PATH) || (steps.op1.outputs.RUN_RESULT_STATE != 'SUCCESS')) }}
+        run: |
+          echo "::error::Please check the result of workflow run id '${{ inputs.run_id }}' from this url '${{ steps.op1.outputs.RUN_PAGE_URL }}'"
+          echo "approve_status=pending" >> $GITHUB_OUTPUT
+          exit 1
+
+  deploy-databricks-bundle:
+    name: Deploy Databricks Bundle to ${{ inputs.environment }} Environment
+    runs-on: ubuntu-20.04
+    needs: [check-approval-gate]
+    outputs:
+      work_item_id: ${{ steps.op1.outputs.work_item_id }}
+
+    steps:
+      - name: Checkout main branch of DevSecOps repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
+          ref: main
+          fetch-depth: 0
+
+      - name: Load environment variables from ${{ inputs.environment }} dotenv file
+        run: |
+          cat ./dotenv/${{ inputs.environment }}.env >> $GITHUB_ENV
+
+      - name: Checkout ${{ inputs.ref }} of ${{ inputs.repository }} repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GHE_DEVOPS_TOKEN }}
+
+      - name: Load environment variables from cicd env file
+        run: |
+          cat ./deployment/service/azure_devops/azure_devops_boards.env >> $GITHUB_ENV
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ vars.PYTHON_VERSION_VAR }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ vars.POETRY_VERSION_VAR }}
+
+      - name: Install pip and etc
+        run: |
+          pip install --upgrade pip
+          pip install jq
+          pip install yq
+
+      - name: Install Databricks CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+      - name: Azure login
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AR_DEVOPS_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
+          allow-no-subscriptions: true
+
+      - name: Retrive Secrets from Azure Key Vault
+        run: |
+          echo "AR_FRMWK_CLIENT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_CLIENT_SECRET_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_SECRET_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+
+      - name: Create Azure Databricks configuration profile
+        run: |
+          echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
+          echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
+          echo "azure_tenant_id     = ${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}" >> ~/.databrickscfg
+          echo "azure_client_id     = ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}" >> ~/.databrickscfg
+          echo "azure_client_secret = ${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}" >> ~/.databrickscfg
+          cat ~/.databrickscfg
+
+      - name: Set environment variables
+        run: |
+          echo "DEFAULT_WORKFLOW_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
+          echo "REPOSITORY=${{ inputs.repository }}" >> $GITHUB_ENV
+          echo "APPROVAL_GATE_PATH=/Shared/MDF/${{ inputs.repository }}/${{ inputs.environment }}" >> $GITHUB_ENV
+          echo "SCRIPTS_PATH=/Shared/MDF/${{ inputs.repository }}/scripts" >> $GITHUB_ENV
+          echo "PACKAGE_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
+          echo "CURRENT_VERSION=$(poetry version --dry-run -s)" >> $GITHUB_ENV
+          echo "WORKSPACE_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.workspace | to_entries')" >> $GITHUB_ENV
+
+      - name: Override WORKSPACE_PATH variable
+        run: |
+          case ${{ inputs.environment }} in
+            "dev")
+              echo "WORKSPACE_PATH=$(echo '${{ env.WORKSPACE_PATH }}' |  jq -c ['.[] | select(.key | contains("sit_test") or contains("uat_test") | not )'])" >> $GITHUB_ENV
+            ;;
+            "sit")
+              echo "WORKSPACE_PATH=$(echo '${{ env.WORKSPACE_PATH }}' |  jq -c ['.[] | select(.key | contains("unit_test") or contains("uat_test") | not )'])" >> $GITHUB_ENV
+            ;;
+            "uat")
+              echo "WORKSPACE_PATH=$(echo '${{ env.WORKSPACE_PATH }}' |  jq -c ['.[] | select(.key | contains("unit_test") or contains("sit_test") | not )'])" >> $GITHUB_ENV
+            ;;
+            "prod")
+              echo "WORKSPACE_PATH=$(echo '${{ env.WORKSPACE_PATH }}' |  jq -c ['.[] | select(.key | contains("_test") | not )'])" >> $GITHUB_ENV
+            ;;
+          esac
+
+      - name: Delete files from the destination
+        run: |
+          for path in $(echo '${{ env.WORKSPACE_PATH }}' | jq -c '.[]'); do
+            SOURCE_PATH=$(echo "$path" | jq -r '.key')
+            DEST_PATH=$(echo "$path" | jq -r '.value')
+            echo "Creating directory in workspace path ${DEST_PATH}..."
+            databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace mkdirs ${DEST_PATH}
+            echo "Listing files in workspace path ${DEST_PATH}..."
+            databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list ${DEST_PATH}
+            if [[ ${SOURCE_PATH} != *"_test" ]]; then
+              echo "Deleting files in workspace path ${DEST_PATH}..."
+              databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace delete ${DEST_PATH} --recursive
+            fi
+          done
+
+      - name: Validate the bundle configuration files
+        run: |
+          databricks --profile ${{ env.DATABRICKS_PROFILE }} bundle validate
+
+      - name: Deploy the bundle
+        run: |
+          databricks --profile ${{ env.DATABRICKS_PROFILE }} bundle deploy
+
+      - name: Set job outputs
+        id: op1
+        run: |
+          echo "work_item_id=$(echo ${{ env.WORK_ITEM_ID }})" >> $GITHUB_OUTPUT
+
+  deploy-files-to-volumes:
+    name:  Deploy Files to Databricks Volumes
+    runs-on: ubuntu-20.04
+    needs: [check-approval-gate]
+
+    steps:
+      - name: Checkout main branch of DevSecOps repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
+          ref: main
+          fetch-depth: 0
+
+      - name: Load environment variables from ${{ inputs.environment }} dotenv file
+        run: |
+          cat ./dotenv/${{ inputs.environment }}.env >> $GITHUB_ENV
+
+      - name: Checkout ${{ inputs.ref }} of ${{ inputs.repository }} repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GHE_DEVOPS_TOKEN }}
+
+      - name: Install pip and etc
+        run: |
+          pip install --upgrade pip
+          pip install jq
+          pip install yq
+
+      - name: Install AzCopy
+        run: |
+          wget -O azcopy_v10.tar.gz https://aka.ms/downloadazcopy-v10-linux && tar -xf azcopy_v10.tar.gz --strip-components=1
+
+      - name: Azure login
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AR_DEVOPS_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
+          allow-no-subscriptions: true
+
+      - name: Retrive Secrets from Azure Key Vault
+        run: |
+          echo "AR_FRMWK_CLIENT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_CLIENT_SECRET_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_SECRET_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+
+      - name: Set environment variables
+        run: |
+          echo "DEFAULT_WORKFLOW_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
+          echo "REPOSITORY=${{ inputs.repository }}" >> $GITHUB_ENV
+          echo "APPROVAL_GATE_PATH=/Shared/MDF/${{ inputs.repository }}/${{ inputs.environment }}" >> $GITHUB_ENV
+          echo "SCRIPTS_PATH=/Shared/MDF/${{ inputs.repository }}/scripts" >> $GITHUB_ENV
+          echo "PACKAGE_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
+          echo "CURRENT_VERSION=$(poetry version --dry-run -s)" >> $GITHUB_ENV
+          echo "ADLS_ARTIFACT_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.adls_artifact | to_entries')" >> $GITHUB_ENV
+          echo "AZCOPY_AUTO_LOGIN_TYPE=SPN" >> $GITHUB_ENV
+          echo "AZCOPY_SPA_APPLICATION_ID=${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}" >> $GITHUB_ENV
+          echo "AZCOPY_SPA_CLIENT_SECRET=${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}" >> $GITHUB_ENV
+          echo "AZCOPY_TENANT_ID=${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}" >> $GITHUB_ENV
+
+      - name: Deploy Files to Databricks Volumes
+        run: |
+          for path in $(echo '${{ env.ADLS_ARTIFACT_PATH }}' | jq -c '.[]'); do
+            SOURCE_PATH=$(echo "$path" | jq -r '.key')
+            DEST_PATH=$(echo "$path" | jq -r '.value')
+            echo "Deploying files to artifact path ${DEST_PATH}..."
+            azcopy sync ".${DEST_PATH}" "https://pocadlsmdf.dfs.core.windows.net/artifact/mdf/ingestion/test_deployment${DEST_PATH}" --exclude-pattern=.gitkeep --delete-destination=true #TODO: ${{ env.ADLS_ARTIFACT_URL }}
+            # azcopy sync ".${DEST_PATH}" "https://adlsmdfseatestfw001.dfs.core.windows.net/artifact${DEST_PATH}" --exclude-pattern=.gitkeep --delete-destination=true
+          done
+
+  execute-post-deployment-script:
+    name: Execute Post-deployment Script
+    runs-on: ubuntu-20.04
+    needs: [deploy-databricks-bundle, deploy-files-to-volumes]
+    # needs: [deploy-databricks-bundle] #TODO: REMOVE
+    strategy:
+      # fail-fast: true
+      max-parallel: 1 #To define the maximum number of concurrent jobs
+      matrix:
+        post_deployment_script: ${{ fromJSON(inputs.post_deployment_script) }}
+
+    steps:
+      - name: Checkout main branch of DevSecOps repository
+        if: ${{ inputs.post_deployment_script != '["skip"]' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
+          ref: main
+          fetch-depth: 0
+
+      - name: Load environment variables from ${{ inputs.environment }} dotenv file
+        if: ${{ inputs.post_deployment_script != '["skip"]' }}
+        run: |
+          cat ./dotenv/${{ inputs.environment }}.env >> $GITHUB_ENV
+
+      - name: Checkout ${{ inputs.ref }} of ${{ inputs.repository }} repository
+        if: ${{ inputs.post_deployment_script != '["skip"]' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GHE_DEVOPS_TOKEN }}
+
+      - name: Install pip and etc
+        if: ${{ inputs.post_deployment_script != '["skip"]' }}
+        run: |
+          pip install --upgrade pip
+          pip install jq
+          pip install yq
+
+      - name: Azure login
+        if: ${{ inputs.post_deployment_script != '["skip"]' }}
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AR_DEVOPS_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
+          allow-no-subscriptions: true
+
+      - name: Retrive Secrets from Azure Key Vault
+        run: |
+          echo "AR_FRMWK_CLIENT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_CLIENT_SECRET_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_SECRET_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+
+      - name: Generate and save AAD Token
+        if: ${{ inputs.post_deployment_script != '["skip"]' }}
+        run: |
+          echo "DATABRICKS_TOKEN=$(curl -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
+            https://login.microsoftonline.com/${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}/oauth2/v2.0/token \
+            -d 'client_id=${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}' \
+            -d 'grant_type=client_credentials' \
+            -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
+            -d 'client_secret=${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}' |  jq -r  '.access_token')" >> $GITHUB_ENV
+
+      - name: Set environment variables
+        if: ${{ inputs.post_deployment_script != '["skip"]' }}
+        run: |
+          echo "POST_DEPLOYMENT_SCRIPT_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.workspace | to_entries' | jq -r '.[] | select(.key=="post_deployment_script") | .value')" >> $GITHUB_ENV
+
+      - name: Trigger databricks notebook
+        id: databricks-run
+        if: ${{ inputs.post_deployment_script != '["skip"]' }}
+        uses: databricks/run-notebook@v0
+        with:
+          databricks-host: ${{ env.DATABRICKS_HOST }}
+          databricks-token: ${{ env.DATABRICKS_TOKEN }}
+          run-name: "execute-post-deployment-script"
+          workspace-notebook-path: "${{ env.POST_DEPLOYMENT_SCRIPT_PATH }}${{ inputs.baseline_no }}/${{ matrix.post_deployment_script }}"
+          existing-cluster-id: ${{ env.DATABRICKS_CLUSTER_ID }}
+          notebook-params-json: >
+            [
+              {
+                "key": "environment",
+                "value": "${{ inputs.environment }}"
+              }
+            ]
+          access-control-list-json: >
+            [
+              {
+                "user_name": "${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}",
+                "permission_level": "IS_OWNER"
+              }
+            ]
+          # timeout-seconds: 900 #15 Minutes
+
+      - name: Check Run Output
+        if: ${{ inputs.post_deployment_script != '["skip"]' }}
+        run: |
+          echo ${{ steps.databricks-run.outputs.notebook-output }}
+
+  update-work-item:
+    name: Update work item on Azure Boards
+    runs-on: ubuntu-20.04
+    needs: [check-approval-gate, deploy-databricks-bundle, deploy-files-to-volumes, execute-post-deployment-script]
+    if: ${{ inputs.environment != 'dev' }}
+    steps:
+      - name: Checkout main branch of DevSecOps repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
+          ref: main
+          fetch-depth: 0
+
+      - name: Update a work item on Azure Boards
+        uses: ./custom-actions/azure-devops-boards/update-work-item
+        with:
+          environment: ${{ inputs.environment }}
+          work_item_id: ${{ needs.deploy-databricks-bundle.outputs.work_item_id }}
+          board_column: '${{ inputs.environment }} Deployment'
+          token: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO ${{ secrets.AZURE_DEVOPS_TOKEN }}
+          run_id: ${{ inputs.run_id }}
+          run_result_state: ${{ needs.check-approval-gate.outputs.run_result_state }}
+          run_notebook_path: ${{ needs.check-approval-gate.outputs.run_notebook_path }}
+          run_page_url: ${{ needs.check-approval-gate.outputs.run_page_url }}
