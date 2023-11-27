@@ -119,7 +119,7 @@ jobs:
         run: |
           echo "AR_FRMWK_CLIENT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
           echo "AR_FRMWK_CLIENT_SECRET_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_SECRET_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
-          echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
           echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
 
       - name: Create Azure Databricks configuration profile
