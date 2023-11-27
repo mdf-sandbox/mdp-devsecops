@@ -123,9 +123,9 @@ jobs:
         run: |
           echo "[${{ vars.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
           echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
-          echo "azure_tenant_id     = ${{ steps.azurekeyvault.outputs.AR_FRMWK_TENANT_ID_KV }}" >> ~/.databrickscfg
-          echo "azure_client_id     = ${{ steps.azurekeyvault.outputs.AR_FRMWK_CLIENT_ID_KV }}" >> ~/.databrickscfg
-          echo "azure_client_secret = ${{ steps.azurekeyvault.outputs.AR_FRMWK_CLIENT_SECRET_KV }}" >> ~/.databrickscfg
+          echo "azure_tenant_id     = ${{ steps.azurekeyvault.outputs.env.AR_FRMWK_TENANT_ID_KV }}" >> ~/.databrickscfg
+          echo "azure_client_id     = ${{ steps.azurekeyvault.outputs.env.AR_FRMWK_CLIENT_ID_KV }}" >> ~/.databrickscfg
+          echo "azure_client_secret = ${{ steps.azurekeyvault.outputs.env.AR_FRMWK_CLIENT_SECRET_KV }}" >> ~/.databrickscfg
           cat ~/.databrickscfg
 
       - name: Get metadata from Databricks workflow Run ID
