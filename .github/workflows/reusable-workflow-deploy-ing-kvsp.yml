@@ -128,7 +128,7 @@ jobs:
 
       - name: Start a terminated Spark cluster
         run: |
-          curl -X POST --header 'content-type:application/json' --header 'authorization:Bearer ${{ env.DATABRICKS_TOKEN }}' -d '{"cluster_id": "0921-080330-m15ze66k"}' ${{ env.DATABRICKS_HOST }}/api/2.0/clusters/start --insecure -v
+          curl -X POST --header 'content-type:application/json' --header 'authorization:Bearer ${{ env.DATABRICKS_TOKEN }}' -d '{"cluster_id": "1116-034613-ehxcm71j"}' ${{ env.DATABRICKS_HOST }}/api/2.0/clusters/start --insecure -v
 
       - name: Trigger databricks notebook
         id: databricks-run
@@ -140,7 +140,7 @@ jobs:
           databricks-token: ${{ env.DATABRICKS_TOKEN }} #TODO: Change to SP login
           run-name: "execute-post-deployment-script"
           workspace-notebook-path: "${{ env.POST_DEPLOYMENT_SCRIPT_PATH }}${{ inputs.baseline_no }}/${{ matrix.post_deployment_script }}"
-          existing-cluster-id: "0921-080330-m15ze66k" #dp-batch-processing
+          existing-cluster-id: "1116-034613-ehxcm71j" #dp-batch-processing
           # existing-cluster-id: "1002-080329-vfiifjp9" #dp_fw_developing
           notebook-params-json: >
             [
