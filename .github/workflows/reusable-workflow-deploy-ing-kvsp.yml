@@ -117,7 +117,7 @@ jobs:
         uses: Azure/get-keyvault-secrets@v1
         with:
           keyvault: ${{ env.AZURE_KEYVAULT_NAME }}
-          secrets: '${{ secrets.AR_FRMWK_CLIENT_ID_KV }}, ${{ secrets.AR_FRMWK_CLIENT_SECRET_KV }}, ${{ secrets.AR_FRMWK_TENANT_ID_KV }}, ${{ secrets.AR_FRMWK_SUBSCRIPTION_ID_KV }}'
+          secrets: '${{ env.AR_FRMWK_CLIENT_ID_KV }}, ${{ env.AR_FRMWK_CLIENT_SECRET_KV }}, ${{ env.AR_FRMWK_TENANT_ID_KV }}, ${{ env.AR_FRMWK_SUBSCRIPTION_ID_KV }}'
 
       - name: Create Azure Databricks configuration profile
         run: |
