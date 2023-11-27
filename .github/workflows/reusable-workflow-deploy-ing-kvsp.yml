@@ -121,7 +121,7 @@ jobs:
 
       - name: Create Azure Databricks configuration profile
         run: |
-          echo "[${{ vars.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
+          echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
           echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
           echo "azure_tenant_id     = ${{ steps.azurekeyvault.outputs.env.AR_FRMWK_TENANT_ID_KV }}" >> ~/.databrickscfg
           echo "azure_client_id     = ${{ steps.azurekeyvault.outputs.env.AR_FRMWK_CLIENT_ID_KV }}" >> ~/.databrickscfg
@@ -131,7 +131,7 @@ jobs:
       - name: Get metadata from Databricks workflow Run ID
         if: ${{ inputs.run_id != '' }}
         run: |
-          databricks --profile ${{ vars.DATABRICKS_PROFILE }} jobs get-run ${{ inputs.run_id }} | jq '{result_state: .state.result_state, notebook_path: .job_parameters[] | select(.name=="notebook_path") | .value, run_page_url: .run_page_url}' > run_metadata.json #TODO: ${{ vars.DATABRICKS_PROFILE }}
+          databricks --profile ${{ env.DATABRICKS_PROFILE }} jobs get-run ${{ inputs.run_id }} | jq '{result_state: .state.result_state, notebook_path: .job_parameters[] | select(.name=="notebook_path") | .value, run_page_url: .run_page_url}' > run_metadata.json #TODO: ${{ vars.DATABRICKS_PROFILE }}
           cat run_metadata.json
 
       - name: Generate and save AAD Token
