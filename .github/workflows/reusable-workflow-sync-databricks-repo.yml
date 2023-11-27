@@ -45,4 +45,4 @@ jobs:
 
       - name: Update the repo to the latest commit on ${{ inputs.ref }} branch
         run: |
-          databricks --profile ar-frmwk repos update --path /Repos/${{ inputs.repository }} --branch ${{ inputs.ref }} #TODO: ${{ vars.DATABRICKS_PROFILE }} #TODO: ${{ vars.DATABRICKS_PROFILE }}
+          databricks --profile ar-frmwk repos update /Repos/${{ inputs.repository }} --branch ${{ inputs.ref }} #TODO: ${{ vars.DATABRICKS_PROFILE }} #TODO: ${{ vars.DATABRICKS_PROFILE }}
