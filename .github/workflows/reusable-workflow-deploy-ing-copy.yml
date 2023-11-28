@@ -184,9 +184,9 @@ jobs:
           # [ $(ls ${{ env.VOL_CONFIG }} | wc -l) -eq $(databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.VOL_CONFIG }} | sed 1d | wc -l) ] && echo "${{ env.VOL_CONFIG }} matched!" || { echo "${{ env.VOL_CONFIG }} not matched!"; exit 1; }
           # [ $(ls ${{ env.VOL_MAPPING }} | wc -l) -eq $(databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.VOL_MAPPING }} | sed 1d | wc -l) ] && echo "${{ env.VOL_MAPPING }} matched!" || { echo "${{ env.VOL_MAPPING }} not matched!"; exit 1; }
 
-          test1=$(azcopy list "https://pocadlsmdf.dfs.core.windows.net/artifact/mdf/ingestion/test_deployment/${{ env.VOL_CONFIG}}" --running-tally | grep 'File count:' | awk '{print $4}')
-          test2=$($(azcopy list "https://pocadlsmdf.dfs.core.windows.net/artifact/mdf/ingestion/test_deployment/${{ env.VOL_MAPPING}}" --running-tally | grep 'File count:' | awk '{print $4}') - 1)
-          echo "$test1 ,,,,,,,,,,"
+          test1=$(azcopy list "https://pocadlsmdf.dfs.core.windows.net/artifact/mdf/ingestion/test_deployment/${{ env.VOL_CONFIG }}" --running-tally | grep 'File count:' | awk '{print $4}')
+          test2=$(azcopy list "https://pocadlsmdf.dfs.core.windows.net/artifact/mdf/ingestion/test_deployment/${{ env.VOL_MAPPING }}" --running-tally | grep 'File count:' | awk '{print $4}')
+          echo "$((test1 - 1)) ,,,,,,,,,,"
           echo "$test2"
 
 
