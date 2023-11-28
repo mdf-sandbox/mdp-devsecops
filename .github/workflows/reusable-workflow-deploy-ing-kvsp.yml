@@ -269,6 +269,7 @@ jobs:
               echo "Deleting files in workspace path ${DEST_PATH}..."
               databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace delete ${DEST_PATH} --recursive
             fi
+            echo -e "\n"
           done
 
       - name: Validate the bundle configuration files
@@ -488,6 +489,7 @@ jobs:
             find . -name ".gitkeep" -delete
             echo "Deploying files to volume path ${{ env.DATABRICKS_VOLUMES_ARTIFACT_PATH }}${DEST_PATH}..."
             databricks fs cp .${DEST_PATH} dbfs:${{ env.DATABRICKS_VOLUMES_ARTIFACT_PATH }}${DEST_PATH} --recursive
+            echo -e "\n"
           done
 
   execute-post-deployment-script:
