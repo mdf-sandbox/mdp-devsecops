@@ -450,8 +450,12 @@ jobs:
           notebook-params-json: >
             [
               {
-                "key": "volume_path",
-                "value": "[{'key':'config','value':'/config/mdp/ingestion/migration/''},{'key':'mapping','value':'/mapping/mdp/ingestion_spec/migration/'}]"
+                "key": "DATABRICKS_VOLUMES_ARTIFACT_PATH",
+                "value": "${{ env.DATABRICKS_VOLUMES_ARTIFACT_PATH }}"
+              },
+              {
+                "key": "ADLS_ARTIFACT_PATH",
+                "value": "[{'key':'config','value':'/config/mdp/ingestion/migration/'},{'key':'mapping','value':'/mapping/mdp/ingestion_spec/migration/'}]"
               }
             ]
           access-control-list-json: >
