@@ -444,7 +444,7 @@ jobs:
             [
               {
                 "key": "volume_path",
-                "value": ${{ env.ADLS_ARTIFACT_PATH }}
+                "value": '[{'key':'config','value':'/config/mdp/ingestion/migration/''},{'key':'mapping','value':'/mapping/mdp/ingestion_spec/migration/'}]"
               }
             ]
           access-control-list-json: >
