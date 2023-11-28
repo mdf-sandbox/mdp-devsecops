@@ -403,6 +403,15 @@ jobs:
           echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
           echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
 
+      - name: Create Azure Databricks configuration profile
+        run: |
+          echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
+          echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
+          echo "azure_tenant_id     = ${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}" >> ~/.databrickscfg
+          echo "azure_client_id     = ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}" >> ~/.databrickscfg
+          echo "azure_client_secret = ${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}" >> ~/.databrickscfg
+          cat ~/.databrickscfg
+
       - name: Set environment variables
         run: |
           echo "DEFAULT_WORKFLOW_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
