@@ -403,14 +403,14 @@ jobs:
           echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
           echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
 
-      - name: Create Azure Databricks configuration profile
-        run: |
-          echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
-          echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
-          echo "azure_tenant_id     = ${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}" >> ~/.databrickscfg
-          echo "azure_client_id     = ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}" >> ~/.databrickscfg
-          echo "azure_client_secret = ${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}" >> ~/.databrickscfg
-          cat ~/.databrickscfg
+      # - name: Create Azure Databricks configuration profile
+      #   run: |
+      #     echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
+      #     echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
+      #     echo "azure_tenant_id     = ${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}" >> ~/.databrickscfg
+      #     echo "azure_client_id     = ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}" >> ~/.databrickscfg
+      #     echo "azure_client_secret = ${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}" >> ~/.databrickscfg
+      #     cat ~/.databrickscfg
 
       - name: Generate and save AAD Token
         run: |
@@ -467,10 +467,6 @@ jobs:
         run: |
           echo ${{ steps.databricks-run.outputs.notebook-output }}
 
-      - name: Reset AAD Token
-        run: |
-          echo "DATABRICKS_TOKEN=''" >> $GITHUB_ENV
-
       - name: Checkout ${{ inputs.ref }} of ${{ inputs.repository }} repository
         uses: actions/checkout@v4
         with:
@@ -485,8 +481,17 @@ jobs:
             SOURCE_PATH=$(echo "$path" | jq -r '.key')
             DEST_PATH=$(echo "$path" | jq -r '.value')
             echo "Deploying files to artifact path ${DEST_PATH}..."
-            databricks --profile ${{ env.DATABRICKS_PROFILE }} fs cp .${DEST_PATH} dbfs:${{ env.DATABRICKS_VOLUMES_ARTIFACT_PATH }}${DEST_PATH} --recursive
+            databricks fs cp .${DEST_PATH} dbfs:${{ env.DATABRICKS_VOLUMES_ARTIFACT_PATH }}${DEST_PATH} --recursive
           done
+
+      # - name: Deploy Files to Databricks Volumes
+      #   run: |
+      #     for path in $(echo '${{ env.ADLS_ARTIFACT_PATH }}' | jq -c '.[]'); do
+      #       SOURCE_PATH=$(echo "$path" | jq -r '.key')
+      #       DEST_PATH=$(echo "$path" | jq -r '.value')
+      #       echo "Deploying files to artifact path ${DEST_PATH}..."
+      #       databricks --profile ${{ env.DATABRICKS_PROFILE }} fs cp .${DEST_PATH} dbfs:${{ env.DATABRICKS_VOLUMES_ARTIFACT_PATH }}${DEST_PATH} --recursive
+      #     done
 
   execute-post-deployment-script:
     name: Execute Post-deployment Script
