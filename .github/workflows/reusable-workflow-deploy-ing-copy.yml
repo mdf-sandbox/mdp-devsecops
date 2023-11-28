@@ -109,6 +109,10 @@ jobs:
           pip install jq
           pip install yq
 
+      - name: Install AzCopy
+        run: |
+          wget -O azcopy_v10.tar.gz https://aka.ms/downloadazcopy-v10-linux && tar -xf azcopy_v10.tar.gz --strip-components=1
+
       - name: Install Databricks CLI
         run: |
           curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
@@ -138,26 +142,34 @@ jobs:
       - name: Retrieve file counts from repository
         env:
           DDL_DB_INIT_PERSIST: "ddl/mdp/db_init/migration_test/persist"
+          DDL_DB_INIT_RAW: "ddl/mdp/db_init/migration_test/raw"
+          DDL_TABLE_INIT_PERSIST: "ddl/mdp/table_init/migration_test/persist"
+          DDL_TABLE_INIT_RAW: "ddl/mdp/table_init/migration_test/raw"
+          DDL_VIEW_INIT: "ddl/mdp/view_init/migration_test"
+          VOL_CONFIG: "config/mdp/ingestion/migration_test"
+          VOL_MAPPING: "mapping/mdp/ingestion_spec/migration_test"
         run: | 
           [ $(ls ${{ env.DDL_DB_INIT_PERSIST }} | wc -l) -eq $(databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.DDL_DB_INIT_PERSIST }} | sed 1d | wc -l) ] && echo "${{ env.DDL_DB_INIT_PERSIST }} matched!" || { echo "${{ env.DDL_DB_INIT_PERSIST }} not matched!"; exit 1; }
+          [ $(ls ${{ env.DDL_DB_INIT_RAW }} | wc -l) -eq $(databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.DDL_DB_INIT_RAW }} | sed 1d | wc -l) ] && echo "${{ env.DDL_DB_INIT_RAW }} matched!" || { echo "${{ env.DDL_DB_INIT_RAW }} not matched!"; exit 1; }
+          
+          [ $(ls ${{ env.DDL_TABLE_INIT_PERSIST }} | wc -l) -eq $(databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.DDL_TABLE_INIT_PERSIST }} | sed 1d | wc -l) ] && echo "${{ env.DDL_DB_INIT_PERSIST }} matched!" || { echo "${{ env.DDL_TABLE_INIT_PERSIST }} not matched!"; exit 1; }
+          [ $(ls ${{ env.DDL_TABLE_INIT_RAW }} | wc -l) -eq $(databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.DDL_TABLE_INIT_RAW }} | sed 1d | wc -l) ] && echo "${{ env.DDL_TABLE_INIT_RAW }} matched!" || { echo "${{ env.DDL_TABLE_INIT_RAW }} not matched!"; exit 1; }
 
-          ls ddl/mdp/db_init/migration_test/persist | wc -l
-          ls ddl/mdp/db_init/migration_test/raw | wc -l
+          [ $(ls ${{ env.DDL_VIEW_INIT }} | wc -l) -eq $(databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.DDL_VIEW_INIT }} | sed 1d | wc -l) ] && echo "${{ env.DDL_VIEW_INIT }} matched!" || { echo "${{ env.DDL_VIEW_INIT }} not matched!"; exit 1; }
+          
+          ls ${{ env.DDL_DB_INIT_PERSIST }} | wc -l
+          databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.DDL_DB_INIT_PERSIST }} | sed 1d | wc -l
+          ls ${{ env.DDL_DB_INIT_RAW }} | wc -l
+          databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.DDL_DB_INIT_RAW }} | sed 1d | wc -l
+          ls ${{ env.DDL_TABLE_INIT_PERSIST }} | wc -l
+          databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.DDL_TABLE_INIT_PERSIST }} | sed 1d | wc -l
+          ls ${{ env.DDL_DB_INIT_RAW }} | wc -l
+          databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.DDL_TABLE_INIT_RAW }} | sed 1d | wc -l
 
-          ls ddl/mdp/table_init/migration_test/persist | wc -l
-          ls ddl/mdp/table_init/migration_test/raw | wc -l
+          # [ $(ls ${{ env.VOL_CONFIG }} | wc -l) -eq $(databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.VOL_CONFIG }} | sed 1d | wc -l) ] && echo "${{ env.VOL_CONFIG }} matched!" || { echo "${{ env.VOL_CONFIG }} not matched!"; exit 1; }
+          # [ $(ls ${{ env.VOL_MAPPING }} | wc -l) -eq $(databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.VOL_MAPPING }} | sed 1d | wc -l) ] && echo "${{ env.VOL_MAPPING }} matched!" || { echo "${{ env.VOL_MAPPING }} not matched!"; exit 1; }
 
-          ls ddl/mdp/view_init/migration_test | wc -l
-
-          ls config/mdp/ingestion/migration_test | wc -l
-          ls mapping/mdp/ingestion_spec/migration_test | wc -l
-  
-          databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l
-          databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /ddl/mdp/db_init/migration_test/raw  | sed 1d | wc -l
-
-          databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /ddl/mdp/table_init/migration_test/persist | sed 1d | wc -l
-          databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /ddl/mdp/table_init/migration_test/raw  | sed 1d | wc -l
-
-          databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /ddl/mdp/view_init/migration_test | sed 1d | wc -l
+          azcopy list "https://pocadlsmdf.dfs.core.windows.net/artifact/mdf/ingestion/test_deployment/${{ env.VOL_CONFIG}}" --running-tally
+          azcopy list "https://pocadlsmdf.dfs.core.windows.net/artifact/mdf/ingestion/test_deployment/${{ env.VOL_MAPPING}}" --running-tally
 
 
