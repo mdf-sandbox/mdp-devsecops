@@ -469,7 +469,7 @@ jobs:
 
       - name: Check Run Output
         run: |
-          echo ${{ steps.databricks-run.outputs.notebook-output }}
+          echo "${{ steps.databricks-run.outputs.notebook-output }}"
 
       - name: Checkout ${{ inputs.ref }} of ${{ inputs.repository }} repository
         uses: actions/checkout@v4
