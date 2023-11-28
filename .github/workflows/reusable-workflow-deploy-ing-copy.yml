@@ -1,0 +1,104 @@
+name: reusable-workflow-deploy-ing
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        description: Target environment
+        required: true
+      repository:
+        type: string
+        description: Repository name
+        required: true
+      ref:
+        type: string
+        description: Branch name
+        required: true
+      baseline_no:
+        type: string
+        description: Deployment Baseline Number
+        required: true
+      post_deployment_script:
+        type: string
+        description: Post-deployment Scripts
+        required: true
+      run_id:
+        type: string
+        description: Databricks Run ID
+        required: true
+
+  # Allows you to run this workflow manually from the Action tab
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        description: Target environment
+        options:
+         - uat
+         - prod
+      repository:
+        type: string
+        description: Repository name
+        required: true
+      ref:
+        type: string
+        description: Release tag
+        required: true
+      baseline_no:
+        type: string
+        description: Deployment Baseline Number
+        required: true
+      post_deployment_script:
+        type: string
+        description: Post-deployment Scripts
+        required: true
+      run_id:
+        type: string
+        description: Databricks Run ID
+        required: true
+
+# Use the Bash shell as default settings for all jobs in the workflow
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # 
+  validate-deploy:
+    name: Validate Deployment Objects
+    runs-on: ubuntu-20.04
+   # needs: [deploy-databricks-bundle, deploy-files-to-volumes]     
+    steps:
+      - name: Checkout ${{ inputs.ref }} of ${{ inputs.repository }} repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GHE_DEVOPS_TOKEN }}
+      
+      - name: Retrieve file counts from repository
+        run: | 
+          [ $(ls ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l) -eq $(databricks workspace list /ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l) ] && echo "equal" || { echo "not equal"; exit 1; }
+
+          ls ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l
+          ls ddl/mdp/db_init/migration_test/raw | sed 1d | wc -l
+
+          ls ddl/mdp/table_init/migration_test/persist | sed 1d | wc -l
+          ls ddl/mdp/table_init/migration_test/raw | sed 1d | wc -l
+
+          ls ddl/mdp/view_init/migration_test | sed 1d | wc -l
+
+          ls config/mdp/ingestion/migration_test | sed 1d | wc -l
+          ls mapping/mdp/ingestion_spec/migration_test | sed 1d | wc -l
+  
+          databricks workspace list /ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l
+          databricks workspace list /ddl/mdp/db_init/migration_test/raw  | sed 1d | wc -l
+
+          databricks workspace list /ddl/mdp/table_init/migration_test/persist | sed 1d | wc -l
+          databricks workspace list /ddl/mdp/table_init/migration_test/raw  | sed 1d | wc -l
+
+          databricks workspace list /ddl/mdp/view_init/migration_test | sed 1d | wc -l
+
+
