@@ -404,6 +404,7 @@ jobs:
           allow-no-subscriptions: true
 
       - name: Retrive Secrets from Azure Key Vault
+        if: ${{ inputs.post_deployment_script != '["skip"]' }}
         run: |
           echo "AR_FRMWK_CLIENT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
           echo "AR_FRMWK_CLIENT_SECRET_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_SECRET_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
@@ -469,13 +470,48 @@ jobs:
           ref: main
           fetch-depth: 0
 
+      - name: Load environment variables from ${{ inputs.environment }} dotenv file
+        run: |
+          cat ./dotenv/${{ inputs.environment }}.env >> $GITHUB_ENV
+
+      - name: Checkout main branch of DevSecOps repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
+          ref: main
+          fetch-depth: 0
+
+      - name: Azure login
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AR_DEVOPS_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
+          allow-no-subscriptions: true
+
+      - name: Retrive Secrets from Azure Key Vault
+        run: |
+          echo "AZURE_DEVOPS_TOKEN_KV_VAL=$(az keyvault secret show --name '${{ env.AZURE_DEVOPS_TOKEN_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+
+      - name: Override BOARD_COLUMN variable
+        run: |
+          case ${{ inputs.environment }} in
+            "sit")
+              echo "BOARD_COLUMN=SIT Deployment" >> $GITHUB_ENV
+            ;;
+            "uat")
+              echo "BOARD_COLUMN=UAT Deployment" >> $GITHUB_ENV
+            ;;
+            "prod")
+              echo "BOARD_COLUMN=PROD Deployment" >> $GITHUB_ENV
+            ;;
+          esac
+
       - name: Update a work item on Azure Boards
         uses: ./custom-actions/azure-devops-boards/update-work-item
         with:
           environment: ${{ inputs.environment }}
           work_item_id: ${{ needs.deploy-databricks-bundle.outputs.work_item_id }}
-          board_column: '${{ inputs.environment }} Deployment'
-          token: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO ${{ secrets.AZURE_DEVOPS_TOKEN }}
+          board_column: '${{ env.BOARD_COLUMN }}'
+          token: ${{ env.AZURE_DEVOPS_TOKEN_KV_VAL }}
           run_id: ${{ inputs.run_id }}
           run_result_state: ${{ needs.check-approval-gate.outputs.run_result_state }}
           run_notebook_path: ${{ needs.check-approval-gate.outputs.run_notebook_path }}
