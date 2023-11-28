@@ -430,6 +430,7 @@ jobs:
           echo "PACKAGE_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
           echo "CURRENT_VERSION=$(poetry version --dry-run -s)" >> $GITHUB_ENV
           echo "ADLS_ARTIFACT_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.adls_artifact | to_entries')" >> $GITHUB_ENV
+          echo "ADLS_ARTIFACT_PATH_SQ=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.adls_artifact | to_entries' | sed "s/\"/'/g")" >> $GITHUB_ENV
 
       - name: Checkout main branch of DevSecOps repository
         uses: actions/checkout@v4
@@ -455,7 +456,7 @@ jobs:
               },
               {
                 "key": "ADLS_ARTIFACT_PATH",
-                "value": "[{'key':'config','value':'/config/mdp/ingestion/migration/'},{'key':'mapping','value':'/mapping/mdp/ingestion_spec/migration/'}]"
+                "value": "${{ env.ADLS_ARTIFACT_PATH_SQ }}"
               }
             ]
           access-control-list-json: >
