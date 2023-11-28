@@ -137,7 +137,7 @@ jobs:
       
       - name: Retrieve file counts from repository
         env:
-          DDL_DB_INIT_PERSIST: "ddl/mdp/db_init/migration_test/persist"
+          DDL_DB_INIT_PERSIST: "/ddl/mdp/db_init/migration_test/persist"
         run: | 
           [ $(ls ${{ env.DDL_DB_INIT_PERSIST }} | wc -l) -eq $(databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list ${{ env.DDL_DB_INIT_PERSIST }} | sed 1d | wc -l) ] && echo "${{ env.DDL_DB_INIT_PERSIST }} matched!" || { echo "${{ env.DDL_DB_INIT_PERSIST }} not matched!"; exit 1; }
 
