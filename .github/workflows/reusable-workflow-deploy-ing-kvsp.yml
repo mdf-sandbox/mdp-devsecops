@@ -486,7 +486,7 @@ jobs:
             SOURCE_PATH=$(echo "$path" | jq -r '.key')
             DEST_PATH=$(echo "$path" | jq -r '.value')
             find . -name ".gitkeep" -delete
-            echo "Deploying files to artifact path ${DEST_PATH}..."
+            echo "Deploying files to volume path ${{ env.DATABRICKS_VOLUMES_ARTIFACT_PATH }}${DEST_PATH}..."
             databricks fs cp .${DEST_PATH} dbfs:${{ env.DATABRICKS_VOLUMES_ARTIFACT_PATH }}${DEST_PATH} --recursive
           done
 
