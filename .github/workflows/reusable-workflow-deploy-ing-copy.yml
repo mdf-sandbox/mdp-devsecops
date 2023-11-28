@@ -70,6 +70,15 @@ jobs:
     runs-on: ubuntu-20.04
    # needs: [deploy-databricks-bundle, deploy-files-to-volumes]     
     steps:
+      - name: Install Databricks CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+      - name: Connect to Databricks with Frmwk profiles
+        run: |
+          echo ${{ secrets.AZURE_DATABRICKS_PAT }} | \
+            databricks configure --profile ar-frmwk --host https://adb-5730376679189321.1.azuredatabricks.net --token 
+
       - name: Checkout ${{ inputs.ref }} of ${{ inputs.repository }} repository
         uses: actions/checkout@v4
         with:
@@ -80,7 +89,7 @@ jobs:
       
       - name: Retrieve file counts from repository
         run: | 
-          [ $(ls ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l) -eq $(databricks workspace list /ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l) ] && echo "equal" || { echo "not equal"; exit 1; }
+          [ $(ls ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l) -ne $(databricks workspace list /ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l) ] && echo "equal" || { echo "not equal"; exit 1; }
 
           ls ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l
           ls ddl/mdp/db_init/migration_test/raw | sed 1d | wc -l
