@@ -70,14 +70,16 @@ jobs:
     runs-on: ubuntu-20.04
    # needs: [deploy-databricks-bundle, deploy-files-to-volumes]     
     steps:
-      - name: Install Databricks CLI
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+      - name: Checkout main branch of DevSecOps repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
+          ref: main
+          fetch-depth: 0
 
-      - name: Connect to Databricks with Frmwk profiles
+      - name: Load environment variables from ${{ inputs.environment }} dotenv file
         run: |
-          echo ${{ secrets.AZURE_DATABRICKS_PAT }} | \
-            databricks configure --profile ar-frmwk --host https://adb-5730376679189321.1.azuredatabricks.net --token 
+          cat ./dotenv/${{ inputs.environment }}.env >> $GITHUB_ENV
 
       - name: Checkout ${{ inputs.ref }} of ${{ inputs.repository }} repository
         uses: actions/checkout@v4
@@ -86,6 +88,52 @@ jobs:
           ref: ${{ inputs.ref }}
           fetch-depth: 0
           token: ${{ secrets.GHE_DEVOPS_TOKEN }}
+
+      - name: Load environment variables from cicd env file
+        run: |
+          cat ./deployment/service/azure_devops/azure_devops_boards.env >> $GITHUB_ENV
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ vars.PYTHON_VERSION_VAR }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ vars.POETRY_VERSION_VAR }}
+
+      - name: Install pip and etc
+        run: |
+          pip install --upgrade pip
+          pip install jq
+          pip install yq
+
+      - name: Install Databricks CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+      - name: Azure login
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AR_DEVOPS_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
+          allow-no-subscriptions: true
+
+      - name: Retrive Secrets from Azure Key Vault
+        run: |
+          echo "AR_FRMWK_CLIENT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_CLIENT_SECRET_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_SECRET_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+
+      - name: Create Azure Databricks configuration profile
+        run: |
+          echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
+          echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
+          echo "azure_tenant_id     = ${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}" >> ~/.databrickscfg
+          echo "azure_client_id     = ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}" >> ~/.databrickscfg
+          echo "azure_client_secret = ${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}" >> ~/.databrickscfg
+          cat ~/.databrickscfg
       
       - name: Retrieve file counts from repository
         run: | 
