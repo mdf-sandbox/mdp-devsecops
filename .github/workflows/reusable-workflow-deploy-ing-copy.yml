@@ -112,6 +112,20 @@ jobs:
       - name: Install AzCopy
         run: |
           wget -O azcopy_v10.tar.gz https://aka.ms/downloadazcopy-v10-linux && tar -xf azcopy_v10.tar.gz --strip-components=1
+      
+      - name: Set environment variables
+        run: |
+          echo "DEFAULT_WORKFLOW_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
+          echo "REPOSITORY=${{ inputs.repository }}" >> $GITHUB_ENV
+          echo "APPROVAL_GATE_PATH=/Shared/MDF/${{ inputs.repository }}/${{ inputs.environment }}" >> $GITHUB_ENV
+          echo "SCRIPTS_PATH=/Shared/MDF/${{ inputs.repository }}/scripts" >> $GITHUB_ENV
+          echo "PACKAGE_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
+          echo "CURRENT_VERSION=$(poetry version --dry-run -s)" >> $GITHUB_ENV
+          echo "ADLS_ARTIFACT_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.adls_artifact | to_entries')" >> $GITHUB_ENV
+          echo "AZCOPY_AUTO_LOGIN_TYPE=SPN" >> $GITHUB_ENV
+          echo "AZCOPY_SPA_APPLICATION_ID=64443cb0-2542-4e10-90e2-f04295538d58" >> $GITHUB_ENV
+          echo "AZCOPY_SPA_CLIENT_SECRET=${{ secrets.AZCOPY_SPA_CLIENT_SECRET }}" >> $GITHUB_ENV
+          echo "AZCOPY_TENANT_ID=2aa3892b-2638-4281-a7e3-9623e880e79e" >> $GITHUB_ENV
 
       - name: Install Databricks CLI
         run: |
@@ -152,7 +166,7 @@ jobs:
           [ $(ls ${{ env.DDL_DB_INIT_PERSIST }} | wc -l) -eq $(databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.DDL_DB_INIT_PERSIST }} | sed 1d | wc -l) ] && echo "${{ env.DDL_DB_INIT_PERSIST }} matched!" || { echo "${{ env.DDL_DB_INIT_PERSIST }} not matched!"; exit 1; }
           [ $(ls ${{ env.DDL_DB_INIT_RAW }} | wc -l) -eq $(databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.DDL_DB_INIT_RAW }} | sed 1d | wc -l) ] && echo "${{ env.DDL_DB_INIT_RAW }} matched!" || { echo "${{ env.DDL_DB_INIT_RAW }} not matched!"; exit 1; }
           
-          [ $(ls ${{ env.DDL_TABLE_INIT_PERSIST }} | wc -l) -eq $(databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.DDL_TABLE_INIT_PERSIST }} | sed 1d | wc -l) ] && echo "${{ env.DDL_DB_INIT_PERSIST }} matched!" || { echo "${{ env.DDL_TABLE_INIT_PERSIST }} not matched!"; exit 1; }
+          [ $(ls ${{ env.DDL_TABLE_INIT_PERSIST }} | wc -l) -eq $(databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.DDL_TABLE_INIT_PERSIST }} | sed 1d | wc -l) ] && echo "${{ env.DDLTABLE_INIT_PERSIST }} matched!" || { echo "${{ env.DDL_TABLE_INIT_PERSIST }} not matched!"; exit 1; }
           [ $(ls ${{ env.DDL_TABLE_INIT_RAW }} | wc -l) -eq $(databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.DDL_TABLE_INIT_RAW }} | sed 1d | wc -l) ] && echo "${{ env.DDL_TABLE_INIT_RAW }} matched!" || { echo "${{ env.DDL_TABLE_INIT_RAW }} not matched!"; exit 1; }
 
           [ $(ls ${{ env.DDL_VIEW_INIT }} | wc -l) -eq $(databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.DDL_VIEW_INIT }} | sed 1d | wc -l) ] && echo "${{ env.DDL_VIEW_INIT }} matched!" || { echo "${{ env.DDL_VIEW_INIT }} not matched!"; exit 1; }
