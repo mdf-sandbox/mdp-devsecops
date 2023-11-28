@@ -440,7 +440,7 @@ jobs:
 
       - name: Trigger databricks notebook
         id: databricks-run
-        uses: databricks/run-notebook@v0
+        uses: databricks/run-notebook@v0.0.3
         with:
           databricks-host: ${{ env.DATABRICKS_HOST }}
           databricks-token: ${{ env.DATABRICKS_TOKEN }}
