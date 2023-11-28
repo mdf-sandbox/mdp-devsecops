@@ -137,7 +137,7 @@ jobs:
       
       - name: Retrieve file counts from repository
         run: | 
-          [ $(ls ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l) -ne $(databricks workspace list /ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l) ] && echo "equal" || { echo "not equal"; exit 1; }
+          [ $(ls ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l) -ne $(databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l) ] && echo "equal" || { echo "not equal"; exit 1; }
 
           ls ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l
           ls ddl/mdp/db_init/migration_test/raw | sed 1d | wc -l
@@ -150,12 +150,12 @@ jobs:
           ls config/mdp/ingestion/migration_test | sed 1d | wc -l
           ls mapping/mdp/ingestion_spec/migration_test | sed 1d | wc -l
   
-          databricks workspace list /ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l
-          databricks workspace list /ddl/mdp/db_init/migration_test/raw  | sed 1d | wc -l
+          databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l
+          databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /ddl/mdp/db_init/migration_test/raw  | sed 1d | wc -l
 
-          databricks workspace list /ddl/mdp/table_init/migration_test/persist | sed 1d | wc -l
-          databricks workspace list /ddl/mdp/table_init/migration_test/raw  | sed 1d | wc -l
+          databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /ddl/mdp/table_init/migration_test/persist | sed 1d | wc -l
+          databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /ddl/mdp/table_init/migration_test/raw  | sed 1d | wc -l
 
-          databricks workspace list /ddl/mdp/view_init/migration_test | sed 1d | wc -l
+          databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /ddl/mdp/view_init/migration_test | sed 1d | wc -l
 
 
