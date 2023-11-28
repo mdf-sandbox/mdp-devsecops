@@ -413,7 +413,6 @@ jobs:
           cat ~/.databrickscfg
 
       - name: Generate and save AAD Token
-        if: ${{ inputs.post_deployment_script != '["skip"]' }}
         run: |
           echo "DATABRICKS_TOKEN=$(curl -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
             https://login.microsoftonline.com/${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}/oauth2/v2.0/token \
@@ -458,7 +457,6 @@ jobs:
           # timeout-seconds: 900 #15 Minutes
 
       - name: Check Run Output
-        if: ${{ inputs.post_deployment_script != '["skip"]' }}
         run: |
           echo ${{ steps.databricks-run.outputs.notebook-output }}
 
@@ -468,7 +466,7 @@ jobs:
             SOURCE_PATH=$(echo "$path" | jq -r '.key')
             DEST_PATH=$(echo "$path" | jq -r '.value')
             echo "Deploying files to artifact path ${DEST_PATH}..."
-            databricks --profile ${{ env.DATABRICKS_PROFILE }} fs cp .${DEST_PATH} dbfs:/Volumes/mdptest/artifact${DEST_PATH} --recursive
+            databricks --profile ${{ env.DATABRICKS_PROFILE }} fs cp .${DEST_PATH} dbfs:${{ env.DATABRICKS_VOLUMES_ARTIFACT_PATH }}${DEST_PATH} --recursive
           done
 
   execute-post-deployment-script:
