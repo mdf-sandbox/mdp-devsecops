@@ -284,77 +284,6 @@ jobs:
         run: |
           echo "work_item_id=$(echo ${{ env.WORK_ITEM_ID }})" >> $GITHUB_OUTPUT
 
-  # deploy-files-to-volumes:
-  #   name:  Deploy Files to Databricks Volumes
-  #   runs-on: ubuntu-20.04
-  #   needs: [check-approval-gate]
-
-  #   steps:
-  #     - name: Checkout main branch of DevSecOps repository
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
-  #         ref: main
-  #         fetch-depth: 0
-
-  #     - name: Load environment variables from ${{ inputs.environment }} dotenv file
-  #       run: |
-  #         cat ./dotenv/${{ inputs.environment }}.env >> $GITHUB_ENV
-
-  #     - name: Checkout ${{ inputs.ref }} of ${{ inputs.repository }} repository
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: ${{ inputs.repository }}
-  #         ref: ${{ inputs.ref }}
-  #         fetch-depth: 0
-  #         token: ${{ secrets.GHE_DEVOPS_TOKEN }}
-
-  #     - name: Install pip and etc
-  #       run: |
-  #         pip install --upgrade pip
-  #         pip install jq
-  #         pip install yq
-
-  #     - name: Install AzCopy
-  #       run: |
-  #         wget -O azcopy_v10.tar.gz https://aka.ms/downloadazcopy-v10-linux && tar -xf azcopy_v10.tar.gz --strip-components=1
-
-  #     - name: Azure login
-  #       uses: azure/login@v1
-  #       with:
-  #         creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AR_DEVOPS_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
-  #         allow-no-subscriptions: true
-
-  #     - name: Retrive Secrets from Azure Key Vault
-  #       run: |
-  #         echo "AR_FRMWK_CLIENT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
-  #         echo "AR_FRMWK_CLIENT_SECRET_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_SECRET_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
-  #         echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
-  #         echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
-
-  #     - name: Set environment variables
-  #       run: |
-  #         echo "DEFAULT_WORKFLOW_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
-  #         echo "REPOSITORY=${{ inputs.repository }}" >> $GITHUB_ENV
-  #         echo "APPROVAL_GATE_PATH=/Shared/MDF/${{ inputs.repository }}/${{ inputs.environment }}" >> $GITHUB_ENV
-  #         echo "SCRIPTS_PATH=/Shared/MDF/${{ inputs.repository }}/scripts" >> $GITHUB_ENV
-  #         echo "PACKAGE_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
-  #         echo "CURRENT_VERSION=$(poetry version --dry-run -s)" >> $GITHUB_ENV
-  #         echo "ADLS_ARTIFACT_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.adls_artifact | to_entries')" >> $GITHUB_ENV
-  #         echo "AZCOPY_AUTO_LOGIN_TYPE=SPN" >> $GITHUB_ENV
-  #         echo "AZCOPY_SPA_APPLICATION_ID=${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}" >> $GITHUB_ENV
-  #         echo "AZCOPY_SPA_CLIENT_SECRET=${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}" >> $GITHUB_ENV
-  #         echo "AZCOPY_TENANT_ID=${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}" >> $GITHUB_ENV
-
-  #     - name: Deploy Files to Databricks Volumes
-  #       run: |
-  #         for path in $(echo '${{ env.ADLS_ARTIFACT_PATH }}' | jq -c '.[]'); do
-  #           SOURCE_PATH=$(echo "$path" | jq -r '.key')
-  #           DEST_PATH=$(echo "$path" | jq -r '.value')
-  #           echo "Deploying files to artifact path ${DEST_PATH}..."
-  #           azcopy sync ".${DEST_PATH}" "${{ env.ADLS_ARTIFACT_URL }}${DEST_PATH}" --exclude-pattern=.gitkeep --delete-destination=true
-  #         done
-
   deploy-files-to-volumes:
     name:  Deploy Files to Databricks Volumes
     runs-on: ubuntu-20.04
@@ -390,10 +319,6 @@ jobs:
         run: |
           wget -O azcopy_v10.tar.gz https://aka.ms/downloadazcopy-v10-linux && tar -xf azcopy_v10.tar.gz --strip-components=1
 
-      - name: Install Databricks CLI
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
-
       - name: Azure login
         uses: azure/login@v1
         with:
@@ -406,15 +331,6 @@ jobs:
           echo "AR_FRMWK_CLIENT_SECRET_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_SECRET_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
           echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
           echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
-
-      - name: Create Azure Databricks configuration profile
-        run: |
-          echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
-          echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
-          echo "azure_tenant_id     = ${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}" >> ~/.databrickscfg
-          echo "azure_client_id     = ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}" >> ~/.databrickscfg
-          echo "azure_client_secret = ${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}" >> ~/.databrickscfg
-          cat ~/.databrickscfg
 
       - name: Set environment variables
         run: |
@@ -436,14 +352,98 @@ jobs:
             SOURCE_PATH=$(echo "$path" | jq -r '.key')
             DEST_PATH=$(echo "$path" | jq -r '.value')
             echo "Deploying files to artifact path ${DEST_PATH}..."
-            # azcopy sync ".${DEST_PATH}" "${{ env.ADLS_ARTIFACT_URL }}${DEST_PATH}" --exclude-pattern=.gitkeep --delete-destination=true
-            databricks --profile ${{ env.DATABRICKS_PROFILE }} fs mkdirs dbfs:/Volumes/artifact/mdf/ingestion/test_sp_deployment${DEST_PATH}
-            databricks --profile ${{ env.DATABRICKS_PROFILE }} fs ls dbfs:/Volumes/artifact/mdf/ingestion/test_sp_deployment${DEST_PATH}
-            databricks --profile ${{ env.DATABRICKS_PROFILE }} fs rm dbfs:/Volumes/artifact/mdf/ingestion/test_sp_deployment${DEST_PATH} --recursive
-            databricks --profile ${{ env.DATABRICKS_PROFILE }} fs mkdirs dbfs:/Volumes/artifact/mdf/ingestion/test_sp_deployment${DEST_PATH}
-            databricks --profile ${{ env.DATABRICKS_PROFILE }} fs ls dbfs:/Volumes/artifact/mdf/ingestion/test_sp_deployment${DEST_PATH}
-            databricks --profile ${{ env.DATABRICKS_PROFILE }} fs cp .${DEST_PATH} dbfs:/Volumes/artifact/mdf/ingestion/test_sp_deployment${DEST_PATH} --recursive
+            azcopy sync ".${DEST_PATH}" "${{ env.ADLS_ARTIFACT_URL }}${DEST_PATH}" --exclude-pattern=.gitkeep --delete-destination=true
           done
+
+  # deploy-files-to-volumes:
+  #   name:  Deploy Files to Databricks Volumes
+  #   runs-on: ubuntu-20.04
+  #   needs: [check-approval-gate]
+
+  #   steps:
+  #     - name: Checkout main branch of DevSecOps repository
+  #       uses: actions/checkout@v4
+  #       with:
+  #         repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
+  #         ref: main
+  #         fetch-depth: 0
+
+  #     - name: Load environment variables from ${{ inputs.environment }} dotenv file
+  #       run: |
+  #         cat ./dotenv/${{ inputs.environment }}.env >> $GITHUB_ENV
+
+  #     - name: Checkout ${{ inputs.ref }} of ${{ inputs.repository }} repository
+  #       uses: actions/checkout@v4
+  #       with:
+  #         repository: ${{ inputs.repository }}
+  #         ref: ${{ inputs.ref }}
+  #         fetch-depth: 0
+  #         token: ${{ secrets.GHE_DEVOPS_TOKEN }}
+
+  #     - name: Install pip and etc
+  #       run: |
+  #         pip install --upgrade pip
+  #         pip install jq
+  #         pip install yq
+
+  #     - name: Install AzCopy
+  #       run: |
+  #         wget -O azcopy_v10.tar.gz https://aka.ms/downloadazcopy-v10-linux && tar -xf azcopy_v10.tar.gz --strip-components=1
+
+  #     - name: Install Databricks CLI
+  #       run: |
+  #         curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+  #     - name: Azure login
+  #       uses: azure/login@v1
+  #       with:
+  #         creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AR_DEVOPS_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
+  #         allow-no-subscriptions: true
+
+  #     - name: Retrive Secrets from Azure Key Vault
+  #       run: |
+  #         echo "AR_FRMWK_CLIENT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+  #         echo "AR_FRMWK_CLIENT_SECRET_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_SECRET_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+  #         echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+  #         echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+
+  #     - name: Create Azure Databricks configuration profile
+  #       run: |
+  #         echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
+  #         echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
+  #         echo "azure_tenant_id     = ${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}" >> ~/.databrickscfg
+  #         echo "azure_client_id     = ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}" >> ~/.databrickscfg
+  #         echo "azure_client_secret = ${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}" >> ~/.databrickscfg
+  #         cat ~/.databrickscfg
+
+  #     - name: Set environment variables
+  #       run: |
+  #         echo "DEFAULT_WORKFLOW_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
+  #         echo "REPOSITORY=${{ inputs.repository }}" >> $GITHUB_ENV
+  #         echo "APPROVAL_GATE_PATH=/Shared/MDF/${{ inputs.repository }}/${{ inputs.environment }}" >> $GITHUB_ENV
+  #         echo "SCRIPTS_PATH=/Shared/MDF/${{ inputs.repository }}/scripts" >> $GITHUB_ENV
+  #         echo "PACKAGE_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
+  #         echo "CURRENT_VERSION=$(poetry version --dry-run -s)" >> $GITHUB_ENV
+  #         echo "ADLS_ARTIFACT_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.adls_artifact | to_entries')" >> $GITHUB_ENV
+  #         echo "AZCOPY_AUTO_LOGIN_TYPE=SPN" >> $GITHUB_ENV
+  #         echo "AZCOPY_SPA_APPLICATION_ID=${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}" >> $GITHUB_ENV
+  #         echo "AZCOPY_SPA_CLIENT_SECRET=${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}" >> $GITHUB_ENV
+  #         echo "AZCOPY_TENANT_ID=${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}" >> $GITHUB_ENV
+
+  #     - name: Deploy Files to Databricks Volumes
+  #       run: |
+  #         for path in $(echo '${{ env.ADLS_ARTIFACT_PATH }}' | jq -c '.[]'); do
+  #           SOURCE_PATH=$(echo "$path" | jq -r '.key')
+  #           DEST_PATH=$(echo "$path" | jq -r '.value')
+  #           echo "Deploying files to artifact path ${DEST_PATH}..."
+  #           # azcopy sync ".${DEST_PATH}" "${{ env.ADLS_ARTIFACT_URL }}${DEST_PATH}" --exclude-pattern=.gitkeep --delete-destination=true
+  #           databricks --profile ${{ env.DATABRICKS_PROFILE }} fs mkdirs dbfs:/Volumes/artifact/mdf/ingestion/test_sp_deployment${DEST_PATH}
+  #           databricks --profile ${{ env.DATABRICKS_PROFILE }} fs ls dbfs:/Volumes/artifact/mdf/ingestion/test_sp_deployment${DEST_PATH}
+  #           databricks --profile ${{ env.DATABRICKS_PROFILE }} fs rm dbfs:/Volumes/artifact/mdf/ingestion/test_sp_deployment${DEST_PATH} --recursive
+  #           databricks --profile ${{ env.DATABRICKS_PROFILE }} fs mkdirs dbfs:/Volumes/artifact/mdf/ingestion/test_sp_deployment${DEST_PATH}
+  #           databricks --profile ${{ env.DATABRICKS_PROFILE }} fs ls dbfs:/Volumes/artifact/mdf/ingestion/test_sp_deployment${DEST_PATH}
+  #           databricks --profile ${{ env.DATABRICKS_PROFILE }} fs cp .${DEST_PATH} dbfs:/Volumes/artifact/mdf/ingestion/test_sp_deployment${DEST_PATH} --recursive
+  #         done
 
   execute-post-deployment-script:
     name: Execute Post-deployment Script
