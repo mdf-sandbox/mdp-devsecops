@@ -431,6 +431,13 @@ jobs:
           echo "CURRENT_VERSION=$(poetry version --dry-run -s)" >> $GITHUB_ENV
           echo "ADLS_ARTIFACT_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.adls_artifact | to_entries')" >> $GITHUB_ENV
 
+      - name: Checkout main branch of DevSecOps repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
+          ref: main
+          fetch-depth: 0
+
       - name: Trigger databricks notebook
         id: databricks-run
         uses: databricks/run-notebook@v0
@@ -459,6 +466,14 @@ jobs:
       - name: Check Run Output
         run: |
           echo ${{ steps.databricks-run.outputs.notebook-output }}
+
+      - name: Checkout ${{ inputs.ref }} of ${{ inputs.repository }} repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GHE_DEVOPS_TOKEN }}
 
       - name: Deploy Files to Databricks Volumes
         run: |
