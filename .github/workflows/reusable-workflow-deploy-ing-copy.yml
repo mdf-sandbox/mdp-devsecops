@@ -80,25 +80,25 @@ jobs:
       
       - name: Retrieve file counts from repository
         run: | 
-          [ $(ls ddl/mdp/db_init/mig_datalake/persist | sed 1d | wc -l) -eq $(databricks workspace list /ddl/mdp/db_init/mig_datalake/persist | sed 1d | wc -l) ] && echo "equal" || { echo "not equal"; exit 1; }
+          [ $(ls ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l) -eq $(databricks workspace list /ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l) ] && echo "equal" || { echo "not equal"; exit 1; }
 
-          ls ddl/mdp/db_init/mig_datalake/persist | sed 1d | wc -l
-          ls ddl/mdp/db_init/mig_datalake/raw | sed 1d | wc -l
+          ls ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l
+          ls ddl/mdp/db_init/migration_test/raw | sed 1d | wc -l
 
-          ls ddl/mdp/table_init/mig_datalake/persist | sed 1d | wc -l
-          ls ddl/mdp/table_init/mig_datalake/raw | sed 1d | wc -l
+          ls ddl/mdp/table_init/migration_test/persist | sed 1d | wc -l
+          ls ddl/mdp/table_init/migration_test/raw | sed 1d | wc -l
 
-          ls ddl/mdp/view_init/mig_datalake | sed 1d | wc -l
+          ls ddl/mdp/view_init/migration_test | sed 1d | wc -l
 
-          ls config/mdp/ingestion/mig_datalake | sed 1d | wc -l
-          ls mapping/mdp/ingestion_spec/mig_datalake | sed 1d | wc -l
+          ls config/mdp/ingestion/migration_test | sed 1d | wc -l
+          ls mapping/mdp/ingestion_spec/migration_test | sed 1d | wc -l
   
-          databricks workspace list /ddl/mdp/db_init/mig_datalake/persist | sed 1d | wc -l
-          databricks workspace list /ddl/mdp/db_init/mig_datalake/raw  | sed 1d | wc -l
+          databricks workspace list /ddl/mdp/db_init/migration_test/persist | sed 1d | wc -l
+          databricks workspace list /ddl/mdp/db_init/migration_test/raw  | sed 1d | wc -l
 
-          databricks workspace list /ddl/mdp/table_init/mig_datalake/persist | sed 1d | wc -l
-          databricks workspace list /ddl/mdp/table_init/mig_datalake/raw  | sed 1d | wc -l
+          databricks workspace list /ddl/mdp/table_init/migration_test/persist | sed 1d | wc -l
+          databricks workspace list /ddl/mdp/table_init/migration_test/raw  | sed 1d | wc -l
 
-          databricks workspace list /ddl/mdp/view_init/mig_datalake | sed 1d | wc -l
+          databricks workspace list /ddl/mdp/view_init/migration_test | sed 1d | wc -l
 
 
