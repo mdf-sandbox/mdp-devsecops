@@ -1,4 +1,4 @@
-name: reusable-workflow-prebuild-framework
+name: reusable-workflow-prebuild--framework
 
 on:
   workflow_call:
