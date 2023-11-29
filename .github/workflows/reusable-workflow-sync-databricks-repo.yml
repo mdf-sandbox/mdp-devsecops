@@ -38,11 +38,23 @@ jobs:
         run: |
           curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
 
-      - name: Connect to Databricks with Frmwk profiles
+      - name: Azure login
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AR_DEVOPS_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
+          allow-no-subscriptions: true
+
+      - name: Retrive Secrets from Azure Key Vault
         run: |
-          echo ${{ secrets.AZURE_DATABRICKS_PAT }} | \
-            databricks configure --profile ar-frmwk --host ${{ env.DATABRICKS_HOST }} --token #TODO: ${{ vars.DATABRICKS_PROFILE }}
+          echo "AR_FRMWK_CLIENT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_CLIENT_SECRET_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_SECRET_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+
+      - name: Generate and save AAD Token
+        run: |
+          echo "DATABRICKS_TOKEN=$(az account get-access-token --resource ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }} --query "accessToken" --output tsv) >> $GITHUB_ENV
 
       - name: Update the repo to the latest commit on ${{ inputs.ref }} branch
         run: |
-          databricks --profile ar-frmwk repos update /Repos/${{ inputs.repository }} --branch ${{ inputs.ref }} #TODO: ${{ vars.DATABRICKS_PROFILE }} #TODO: ${{ vars.DATABRICKS_PROFILE }}
+          databricks repos update /Repos/${{ inputs.repository }} --branch ${{ inputs.ref }} #TODO: ${{ vars.DATABRICKS_PROFILE }} #TODO: ${{ vars.DATABRICKS_PROFILE }}
