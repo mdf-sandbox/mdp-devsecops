@@ -74,6 +74,20 @@ jobs:
       approve_status: ${{ steps.op2.outputs.approve_status }}
 
     steps:
+      - name: Checkout ${{ inputs.ref }} of ${{ inputs.repository }} repository
+        if: ${{ inputs.run_id != '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GHE_DEVOPS_TOKEN }}
+
+      - name: Set environment variables
+        if: ${{ inputs.run_id != '' }}
+        run: |
+          echo "WORKSPACE_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.workspace | to_entries')" >> $GITHUB_ENV
+
       - name: Checkout main branch of DevOps repository
         if: ${{ inputs.run_id != '' }}
         uses: actions/checkout@v4
@@ -89,8 +103,22 @@ jobs:
         run: |
           # echo "APPROVAL_GATE_ENVIRONMENT=${{ inputs.environment == 'uat' && 'sit' || 'uat' }}" >> $GITHUB_ENV
           # echo "APPROVAL_GATE_PATH=${{ inputs.environment == 'uat' && '/Shared/MDF/$REPOSITORY_VAR/sit' || '/Shared/MDF/$REPOSITORY_VAR/uat' }}" >> $GITHUB_ENV
-          echo "APPROVAL_GATE_ENVIRONMENT=dev" >> $GITHUB_ENV
-          echo "APPROVAL_GATE_PATH=/test/mdp/unit/mig_imp/" >> $GITHUB_ENV #HARDCODE FOR TEST
+          # echo "APPROVAL_GATE_ENVIRONMENT=dev" >> $GITHUB_ENV
+          # echo "APPROVAL_GATE_PATH=/test/mdp/unit/mig_imp/" >> $GITHUB_ENV #HARDCODE FOR TEST
+          case ${{ inputs.environment }} in
+            "sit")
+              echo "APPROVAL_GATE_ENVIRONMENT=dev" >> $GITHUB_ENV
+              echo "APPROVAL_GATE_PATH=$(echo ${{ env.WORKSPACE_PATH }} | jq -r '.[] | select (.key | contains("unit_test")) | .value')" >> $GITHUB_ENV
+            ;;
+            "uat")
+              echo "APPROVAL_GATE_ENVIRONMENT=sit" >> $GITHUB_ENV
+              echo "APPROVAL_GATE_PATH=$(echo ${{ env.WORKSPACE_PATH }} | jq -r '.[] | select (.key | contains("sit_test")) | .value')" >> $GITHUB_ENV
+            ;;
+            "prod")
+              echo "APPROVAL_GATE_ENVIRONMENT=uat" >> $GITHUB_ENV
+              echo "APPROVAL_GATE_PATH=$(echo ${{ env.WORKSPACE_PATH }} | jq -r '.[] | select (.key | contains("uat_test")) | .value')" >> $GITHUB_ENV
+            ;;
+          esac
 
       - name: Load environment variables from ${{ env.APPROVAL_GATE_ENVIRONMENT }} dotenv file
         if: ${{ inputs.run_id != '' }}
@@ -403,15 +431,6 @@ jobs:
           echo "AR_FRMWK_CLIENT_SECRET_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_SECRET_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
           echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
           echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
-
-      # - name: Create Azure Databricks configuration profile
-      #   run: |
-      #     echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
-      #     echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
-      #     echo "azure_tenant_id     = ${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}" >> ~/.databrickscfg
-      #     echo "azure_client_id     = ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}" >> ~/.databrickscfg
-      #     echo "azure_client_secret = ${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}" >> ~/.databrickscfg
-      #     cat ~/.databrickscfg
 
       - name: Generate and save AAD Token
         run: |
