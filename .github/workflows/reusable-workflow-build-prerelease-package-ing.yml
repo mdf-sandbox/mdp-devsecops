@@ -56,18 +56,18 @@ jobs:
 
       - name: Setup global Git configs
         run: |
-          git config --global user.name "DevOps" #TODO: ${{ vars.GHE_DEVOPS_USERNAME_VAR }}
-          git config --global user.email "DevOps@users.noreply.github.com" #TODO: ${{ vars.GHE_DEVOPS_EMAIL_VAR }}
+          git config --global user.name "${{ vars.GHE_DEVOPS_USERNAME_VAR }}"
+          git config --global user.email "${{ vars.GHE_DEVOPS_EMAIL_VAR }}"
 
       - name: Initial pre-release version on release branch
         if: ${{ inputs.ref == 'main' }}
         run: |
           git checkout -b "release/v${{ env.RELEASE_VERSION }}"
-          git commit -am "Initial pre-release version to ${{ inputs.bump_version_mode }} (${{ env.CURRENT_VERSION }} to ${{ env.PRERELEASE_VERSION }})"
+          git commit -am "Initial ${{ inputs.bump_version_mode }} version from ${{ env.CURRENT_VERSION }} to ${{ env.PRERELEASE_VERSION }}"
           git push -u origin "release/v${{ env.RELEASE_VERSION }}"
 
       - name: Update pre-release version on release branch
         if: ${{ startsWith(inputs.ref, 'release/') }}
         run: |
-          git commit -am "Update pre-release version (${{ env.CURRENT_VERSION }} to ${{ env.PRERELEASE_VERSION }})"
+          git commit -am "Update pre-release version from ${{ env.CURRENT_VERSION }} to ${{ env.PRERELEASE_VERSION }}"
           git push -u origin ${{ inputs.ref }}
