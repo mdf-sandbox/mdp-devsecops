@@ -90,7 +90,7 @@ jobs:
           # echo "APPROVAL_GATE_ENVIRONMENT=${{ inputs.environment == 'uat' && 'sit' || 'uat' }}" >> $GITHUB_ENV
           # echo "APPROVAL_GATE_PATH=${{ inputs.environment == 'uat' && '/Shared/MDF/$REPOSITORY_VAR/sit' || '/Shared/MDF/$REPOSITORY_VAR/uat' }}" >> $GITHUB_ENV
           echo "APPROVAL_GATE_ENVIRONMENT=dev" >> $GITHUB_ENV
-          echo "APPROVAL_GATE_PATH=/test/mdp/unit/ingestion_area1/" >> $GITHUB_ENV #HARDCODE FOR TEST
+          echo "APPROVAL_GATE_PATH=/test/mdp/unit/mig_imp/" >> $GITHUB_ENV #HARDCODE FOR TEST
 
       - name: Load environment variables from ${{ env.APPROVAL_GATE_ENVIRONMENT }} dotenv file
         if: ${{ inputs.run_id != '' }}
