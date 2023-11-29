@@ -61,8 +61,8 @@ jobs:
 
       - name: Setup global Git configs
         run: |
-          git config --global user.name "DevOps" #TODO: ${{ vars.GHE_DEVOPS_USERNAME_VAR }}
-          git config --global user.email "DevOps@users.noreply.github.com" #TODO: ${{ vars.GHE_DEVOPS_EMAIL_VAR }}
+          git config --global user.name "${{ vars.GHE_DEVOPS_USERNAME_VAR }}"
+          git config --global user.email "${{ vars.GHE_DEVOPS_EMAIL_VAR }}"
 
       - name: Release version v${{ env.RELEASE_VERSION }} on main branch
         if: ${{ startsWith(inputs.ref, 'release/') }}
