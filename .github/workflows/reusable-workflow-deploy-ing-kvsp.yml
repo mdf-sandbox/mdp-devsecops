@@ -441,8 +441,8 @@ jobs:
           echo "SCRIPTS_PATH=/Shared/MDF/${{ inputs.repository }}/scripts" >> $GITHUB_ENV
           echo "PACKAGE_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
           echo "CURRENT_VERSION=$(poetry version --dry-run -s)" >> $GITHUB_ENV
-          echo "ADLS_ARTIFACT_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.adls_artifact | to_entries')" >> $GITHUB_ENV
-          echo "ADLS_ARTIFACT_PATH_SQ=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.adls_artifact | to_entries' | sed "s/\"/'/g")" >> $GITHUB_ENV
+          echo "DATABRICKS_VOLUMES_ARTIFACT_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.volumes_artifact | to_entries')" >> $GITHUB_ENV
+          echo "DATABRICKS_VOLUMES_ARTIFACT_PATH_SQ=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.volumes_artifact | to_entries' | sed "s/\"/'/g")" >> $GITHUB_ENV
 
       - name: Checkout main branch of DevSecOps repository
         uses: actions/checkout@v4
@@ -463,12 +463,12 @@ jobs:
           notebook-params-json: >
             [
               {
-                "key": "DATABRICKS_VOLUMES_ARTIFACT_PATH",
-                "value": "${{ env.DATABRICKS_VOLUMES_ARTIFACT_PATH }}"
+                "key": "DATABRICKS_VOLUMES_ARTIFACT_PARENT_PATH",
+                "value": "${{ env.DATABRICKS_VOLUMES_ARTIFACT_PARENT_PATH }}"
               },
               {
-                "key": "ADLS_ARTIFACT_PATH",
-                "value": "${{ env.ADLS_ARTIFACT_PATH_SQ }}"
+                "key": "DATABRICKS_VOLUMES_ARTIFACT_PATH",
+                "value": "${{ env.DATABRICKS_VOLUMES_ARTIFACT_PATH_SQ }}"
               }
             ]
           access-control-list-json: >
