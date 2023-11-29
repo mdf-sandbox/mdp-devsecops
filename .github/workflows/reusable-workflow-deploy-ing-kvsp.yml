@@ -105,15 +105,15 @@ jobs:
           case ${{ inputs.environment }} in
             "sit")
               echo "APPROVAL_GATE_ENVIRONMENT=dev" >> $GITHUB_ENV
-              echo "APPROVAL_GATE_PATH=$(echo ${{ env.WORKSPACE_PATH }} | jq -r '.[] | select (.key | contains("unit_test")) | .value')" >> $GITHUB_ENV
+              echo "APPROVAL_GATE_PATH=$(echo '${{ env.WORKSPACE_PATH }}' | jq -r '.[] | select (.key | contains("unit_test")) | .value')" >> $GITHUB_ENV
             ;;
             "uat")
               echo "APPROVAL_GATE_ENVIRONMENT=sit" >> $GITHUB_ENV
-              echo "APPROVAL_GATE_PATH=$(echo ${{ env.WORKSPACE_PATH }} | jq -r '.[] | select (.key | contains("sit_test")) | .value')" >> $GITHUB_ENV
+              echo "APPROVAL_GATE_PATH=$(echo '${{ env.WORKSPACE_PATH }}' | jq -r '.[] | select (.key | contains("sit_test")) | .value')" >> $GITHUB_ENV
             ;;
             "prod")
               echo "APPROVAL_GATE_ENVIRONMENT=uat" >> $GITHUB_ENV
-              echo "APPROVAL_GATE_PATH=$(echo ${{ env.WORKSPACE_PATH }} | jq -r '.[] | select (.key | contains("uat_test")) | .value')" >> $GITHUB_ENV
+              echo "APPROVAL_GATE_PATH=$(echo '${{ env.WORKSPACE_PATH }}' | jq -r '.[] | select (.key | contains("uat_test")) | .value')" >> $GITHUB_ENV
             ;;
           esac
 
