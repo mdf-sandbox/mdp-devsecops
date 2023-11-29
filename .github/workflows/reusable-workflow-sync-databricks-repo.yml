@@ -51,22 +51,13 @@ jobs:
           echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
           echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
 
-      # - name: Generate Databricks access token using OAuth2
-      #   run: |
-      #     echo "DATABRICKS_TOKEN=$(curl -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
-      #       https://login.microsoftonline.com/${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}/oauth2/v2.0/token \
-      #       -d 'client_id=${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}' \
-      #       -d 'grant_type=client_credentials' \
-      #       -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
-      #       -d 'client_secret=${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}' |  jq -r  '.access_token')" >> $GITHUB_ENV
-
       - name: Generate Databricks access token using OAuth2
         run: |
           echo "DATABRICKS_TOKEN=$(curl -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
             https://login.microsoftonline.com/${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}/oauth2/v2.0/token \
             -d 'client_id=${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}' \
             -d 'grant_type=client_credentials' \
-            -d 'scope=499b84ac-1321-427f-aa17-267ca6975798%2F.default' \
+            -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
             -d 'client_secret=${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}' |  jq -r  '.access_token')" >> $GITHUB_ENV
 
       - name: Update the repo to the latest commit on ${{ inputs.ref }} branch
