@@ -53,7 +53,7 @@ jobs:
 
       - name: Generate and save AAD Token
         run: |
-          echo "DATABRICKS_TOKEN=$(az account get-access-token --resource ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }} --query "accessToken" --output tsv) >> $GITHUB_ENV
+          echo "DATABRICKS_TOKEN=$(az account get-access-token --resource ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }} --query accessToken --output tsv)" >> $GITHUB_ENV
 
       - name: Update the repo to the latest commit on ${{ inputs.ref }} branch
         run: |
