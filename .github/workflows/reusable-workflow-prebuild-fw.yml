@@ -1,0 +1,120 @@
+name: reusable-workflow-prebuild-fw
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        type: string
+        description: Repository name
+        required: true
+      ref:
+        type: string
+        description: Branch name
+        required: true
+
+# Use the Bash shell as default settings for all jobs in the workflow
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  prebuild:
+    name: Pre-Build
+    runs-on: ubuntu-20.04
+    timeout-minutes: 10
+    outputs:
+      package_name: ${{ steps.op1.outputs.package_name }}
+
+    steps:
+      - name: Checkout ${{ inputs.ref }} branch of ${{ inputs.repository }} repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ vars.PYTHON_VERSION_VAR }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ vars.POETRY_VERSION_VAR }}
+
+      - name: Install pip and etc
+        run: |
+          pip install --upgrade pip
+
+      - name: Install package dependencies
+        run: |
+          poetry install -v --without docs
+
+      - name: Linting
+        run: |
+          poetry run pre-commit run --all-files
+
+      - name: Run tests and Check coverage of tests
+        run: |
+          echo "Launching tests"
+          poetry run pytest --cov=src/framework tests/unit --cov-config=tests/unit/.coveragerc --cov-fail-under=60
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: python
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v2
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:python"
+
+      - name: Set job outputs
+        id: op1
+        run: |
+          echo "package_name=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_OUTPUT
+
+  create-work-item:
+    name: Create a work item on Azure Boards
+    runs-on: ubuntu-20.04
+    needs: [prebuild]
+    if: ${{ (startsWith(inputs.ref, 'release/')) || startsWith(inputs.ref, 'hotfix/') }}
+
+    steps:
+      - name: Checkout main branch of DevSecOps repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
+          ref: main
+          fetch-depth: 0
+
+      - name: Create a work item on Azure Boards
+        uses: ./custom-actions/azure-devops-boards/create-work-item
+        id: work-item
+        with:
+          repository: ${{ inputs.repository }}
+          pr_title: ${{ github.event.pull_request.title }}
+          pr_url: ${{ github.event.pull_request._links.html.href }}
+          pr_repository_url: ${{ github.event.pull_request.base.repo.html_url }}
+          pr_number: ${{ github.event.pull_request.number }}
+          pr_state: ${{ github.event.pull_request.state }}
+          pr_head_ref: ${{ github.event.pull_request.head.ref }}
+          pr_base_ref: ${{ github.event.pull_request.base.ref }}
+          pr_created_by: ${{ github.event.pull_request.user.login }}
+          pr_created_at: ${{ github.event.pull_request.created_at }}
+          package_name: ${{ needs.prebuild.outputs.package_name }}
+          token: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO ${{ secrets.AZURE_DEVOPS_TOKEN }}
+
+      - name: Update Pull request title
+        uses: ./custom-actions/github/update-pr-title
+        if: ${{ steps.work-item.outputs.work_item_id != ''}}
+        with:
+          repository: ${{ inputs.repository }}
+          pr_title: ${{ github.event.pull_request.title }}
+          pr_number: ${{ github.event.pull_request.number }}
+          work_item_id: ${{ steps.work-item.outputs.work_item_id }}
+          token: ${{ secrets.GITHUB_TOKEN }}
