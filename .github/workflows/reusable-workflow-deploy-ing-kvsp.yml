@@ -74,6 +74,18 @@ jobs:
       approve_status: ${{ steps.op2.outputs.approve_status }}
 
     steps:
+      - name: Install pip and etc
+        if: ${{ inputs.run_id != '' }}
+        run: |
+          pip install --upgrade pip
+          pip install jq
+          pip install yq
+
+      - name: Install Databricks CLI
+        if: ${{ inputs.run_id != '' }}
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
       - name: Checkout ${{ inputs.ref }} of ${{ inputs.repository }} repository
         if: ${{ inputs.run_id != '' }}
         uses: actions/checkout@v4
@@ -87,6 +99,20 @@ jobs:
         if: ${{ inputs.run_id != '' }}
         run: |
           echo "WORKSPACE_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.workspace | to_entries')" >> $GITHUB_ENV
+          case ${{ inputs.environment }} in
+            "sit")
+              echo "APPROVAL_GATE_ENVIRONMENT=dev" >> $GITHUB_ENV
+              echo "APPROVAL_GATE_PATH=$(echo ${WORKSPACE_PATH} | jq -r '.[] | select (.key | contains("unit_test")) | .value')" >> $GITHUB_ENV
+            ;;
+            "uat")
+              echo "APPROVAL_GATE_ENVIRONMENT=sit" >> $GITHUB_ENV
+              echo "APPROVAL_GATE_PATH=$(echo ${WORKSPACE_PATH} | jq -r '.[] | select (.key | contains("sit_test")) | .value')" >> $GITHUB_ENV
+            ;;
+            "prod")
+              echo "APPROVAL_GATE_ENVIRONMENT=uat" >> $GITHUB_ENV
+              echo "APPROVAL_GATE_PATH=$(echo ${WORKSPACE_PATH} | jq -r '.[] | select (.key | contains("uat_test")) | .value')" >> $GITHUB_ENV
+            ;;
+          esac
 
       - name: Checkout main branch of DevOps repository
         if: ${{ inputs.run_id != '' }}
@@ -96,46 +122,34 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Set environment variables
-        if: ${{ inputs.run_id != '' }}
-        env:
-          REPOSITORY_VAR: ${{ inputs.repository }}
-        run: |
-          # echo "APPROVAL_GATE_ENVIRONMENT=${{ inputs.environment == 'uat' && 'sit' || 'uat' }}" >> $GITHUB_ENV
-          # echo "APPROVAL_GATE_PATH=${{ inputs.environment == 'uat' && '/Shared/MDF/$REPOSITORY_VAR/sit' || '/Shared/MDF/$REPOSITORY_VAR/uat' }}" >> $GITHUB_ENV
-          # echo "APPROVAL_GATE_ENVIRONMENT=dev" >> $GITHUB_ENV
-          # echo "APPROVAL_GATE_PATH=/test/mdp/unit/mig_imp/" >> $GITHUB_ENV #HARDCODE FOR TEST
-          case ${{ inputs.environment }} in
-            "sit")
-              echo "APPROVAL_GATE_ENVIRONMENT=dev" >> $GITHUB_ENV
-              echo "APPROVAL_GATE_PATH=$(echo ${{ env.WORKSPACE_PATH }} | jq -r '.[] | select (.key | contains("unit_test")) | .value')" >> $GITHUB_ENV
-            ;;
-            "uat")
-              echo "APPROVAL_GATE_ENVIRONMENT=sit" >> $GITHUB_ENV
-              echo "APPROVAL_GATE_PATH=$(echo ${{ env.WORKSPACE_PATH }} | jq -r '.[] | select (.key | contains("sit_test")) | .value')" >> $GITHUB_ENV
-            ;;
-            "prod")
-              echo "APPROVAL_GATE_ENVIRONMENT=uat" >> $GITHUB_ENV
-              echo "APPROVAL_GATE_PATH=$(echo ${{ env.WORKSPACE_PATH }} | jq -r '.[] | select (.key | contains("uat_test")) | .value')" >> $GITHUB_ENV
-            ;;
-          esac
+      # - name: Set environment variables
+      #   if: ${{ inputs.run_id != '' }}
+      #   env:
+      #     REPOSITORY_VAR: ${{ inputs.repository }}
+      #   run: |
+      #     # echo "APPROVAL_GATE_ENVIRONMENT=${{ inputs.environment == 'uat' && 'sit' || 'uat' }}" >> $GITHUB_ENV
+      #     # echo "APPROVAL_GATE_PATH=${{ inputs.environment == 'uat' && '/Shared/MDF/$REPOSITORY_VAR/sit' || '/Shared/MDF/$REPOSITORY_VAR/uat' }}" >> $GITHUB_ENV
+      #     # echo "APPROVAL_GATE_ENVIRONMENT=dev" >> $GITHUB_ENV
+      #     # echo "APPROVAL_GATE_PATH=/test/mdp/unit/mig_imp/" >> $GITHUB_ENV #HARDCODE FOR TEST
+      #     case ${{ inputs.environment }} in
+      #       "sit")
+      #         echo "APPROVAL_GATE_ENVIRONMENT=dev" >> $GITHUB_ENV
+      #         echo "APPROVAL_GATE_PATH=$(echo ${{ env.WORKSPACE_PATH }} | jq -r '.[] | select (.key | contains("unit_test")) | .value')" >> $GITHUB_ENV
+      #       ;;
+      #       "uat")
+      #         echo "APPROVAL_GATE_ENVIRONMENT=sit" >> $GITHUB_ENV
+      #         echo "APPROVAL_GATE_PATH=$(echo ${{ env.WORKSPACE_PATH }} | jq -r '.[] | select (.key | contains("sit_test")) | .value')" >> $GITHUB_ENV
+      #       ;;
+      #       "prod")
+      #         echo "APPROVAL_GATE_ENVIRONMENT=uat" >> $GITHUB_ENV
+      #         echo "APPROVAL_GATE_PATH=$(echo ${{ env.WORKSPACE_PATH }} | jq -r '.[] | select (.key | contains("uat_test")) | .value')" >> $GITHUB_ENV
+      #       ;;
+      #     esac
 
       - name: Load environment variables from ${{ env.APPROVAL_GATE_ENVIRONMENT }} dotenv file
         if: ${{ inputs.run_id != '' }}
         run: |
           cat ./dotenv/${{ env.APPROVAL_GATE_ENVIRONMENT }}.env >> $GITHUB_ENV
-
-      - name: Install pip and etc
-        if: ${{ inputs.run_id != '' }}
-        run: |
-          pip install --upgrade pip
-          pip install jq
-          pip install yq
-
-      - name: Install Databricks CLI
-        if: ${{ inputs.run_id != '' }}
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
 
       - name: Azure login
         if: ${{ inputs.run_id != '' }}
