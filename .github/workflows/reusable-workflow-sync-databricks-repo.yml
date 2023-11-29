@@ -51,11 +51,7 @@ jobs:
           echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
           echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
 
-      # - name: Generate and save AAD Token
-      #   run: |
-      #     echo "DATABRICKS_TOKEN=$(az account get-access-token --resource ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }} --query accessToken --output tsv)" >> $GITHUB_ENV
-
-      - name: Generate and save AAD Token
+      - name: Generate Databricks access token using OAuth2
         run: |
           echo "DATABRICKS_TOKEN=$(curl -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
             https://login.microsoftonline.com/${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}/oauth2/v2.0/token \
@@ -66,4 +62,4 @@ jobs:
 
       - name: Update the repo to the latest commit on ${{ inputs.ref }} branch
         run: |
-          databricks repos update /Repos/${{ inputs.repository }} --branch ${{ inputs.ref }} #TODO: ${{ vars.DATABRICKS_PROFILE }} #TODO: ${{ vars.DATABRICKS_PROFILE }}
+          databricks repos update /Repos/${{ inputs.repository }} --branch ${{ inputs.ref }}
