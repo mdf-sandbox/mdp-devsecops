@@ -125,30 +125,6 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      # - name: Set environment variables
-      #   if: ${{ inputs.run_id != '' }}
-      #   env:
-      #     REPOSITORY_VAR: ${{ inputs.repository }}
-      #   run: |
-      #     # echo "APPROVAL_GATE_ENVIRONMENT=${{ inputs.environment == 'uat' && 'sit' || 'uat' }}" >> $GITHUB_ENV
-      #     # echo "APPROVAL_GATE_PATH=${{ inputs.environment == 'uat' && '/Shared/MDF/$REPOSITORY_VAR/sit' || '/Shared/MDF/$REPOSITORY_VAR/uat' }}" >> $GITHUB_ENV
-      #     # echo "APPROVAL_GATE_ENVIRONMENT=dev" >> $GITHUB_ENV
-      #     # echo "APPROVAL_GATE_PATH=/test/mdp/unit/mig_imp/" >> $GITHUB_ENV #HARDCODE FOR TEST
-      #     case ${{ inputs.environment }} in
-      #       "sit")
-      #         echo "APPROVAL_GATE_ENVIRONMENT=dev" >> $GITHUB_ENV
-      #         echo "APPROVAL_GATE_PATH=$(echo ${{ env.WORKSPACE_PATH }} | jq -r '.[] | select (.key | contains("unit_test")) | .value')" >> $GITHUB_ENV
-      #       ;;
-      #       "uat")
-      #         echo "APPROVAL_GATE_ENVIRONMENT=sit" >> $GITHUB_ENV
-      #         echo "APPROVAL_GATE_PATH=$(echo ${{ env.WORKSPACE_PATH }} | jq -r '.[] | select (.key | contains("sit_test")) | .value')" >> $GITHUB_ENV
-      #       ;;
-      #       "prod")
-      #         echo "APPROVAL_GATE_ENVIRONMENT=uat" >> $GITHUB_ENV
-      #         echo "APPROVAL_GATE_PATH=$(echo ${{ env.WORKSPACE_PATH }} | jq -r '.[] | select (.key | contains("uat_test")) | .value')" >> $GITHUB_ENV
-      #       ;;
-      #     esac
-
       - name: Load environment variables from ${{ env.APPROVAL_GATE_ENVIRONMENT }} dotenv file
         if: ${{ inputs.run_id != '' }}
         run: |
@@ -169,20 +145,29 @@ jobs:
           echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
           echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
 
-      - name: Create Azure Databricks configuration profile
-        if: ${{ inputs.run_id != '' }}
+      # - name: Create Azure Databricks configuration profile
+      #   if: ${{ inputs.run_id != '' }}
+      #   run: |
+      #     echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
+      #     echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
+      #     echo "azure_tenant_id     = ${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}" >> ~/.databrickscfg
+      #     echo "azure_client_id     = ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}" >> ~/.databrickscfg
+      #     echo "azure_client_secret = ${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}" >> ~/.databrickscfg
+      #     cat ~/.databrickscfg
+
+      - name: Generate and save AAD Token
         run: |
-          echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
-          echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
-          echo "azure_tenant_id     = ${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}" >> ~/.databrickscfg
-          echo "azure_client_id     = ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}" >> ~/.databrickscfg
-          echo "azure_client_secret = ${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}" >> ~/.databrickscfg
-          cat ~/.databrickscfg
+          echo "DATABRICKS_TOKEN=$(curl -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
+            https://login.microsoftonline.com/${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}/oauth2/v2.0/token \
+            -d 'client_id=${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}' \
+            -d 'grant_type=client_credentials' \
+            -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
+            -d 'client_secret=${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}' |  jq -r  '.access_token')" >> $GITHUB_ENV
 
       - name: Get metadata from Databricks workflow Run ID
         if: ${{ inputs.run_id != '' }}
         run: |
-          databricks --profile ${{ env.DATABRICKS_PROFILE }} jobs get-run ${{ inputs.run_id }} | jq '{result_state: .state.result_state, notebook_path: .job_parameters[] | select(.name=="notebook_path") | .value, run_page_url: .run_page_url}' > run_metadata.json #TODO: ${{ env.DATABRICKS_PROFILE }}
+          databricks jobs get-run ${{ inputs.run_id }} | jq '{result_state: .state.result_state, notebook_path: .job_parameters[] | select(.name=="notebook_path") | .value, run_page_url: .run_page_url}' > run_metadata.json
           cat run_metadata.json
 
       - name: Set environment variables from metadata
@@ -265,14 +250,23 @@ jobs:
           echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
           echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
 
-      - name: Create Azure Databricks configuration profile
+      # - name: Create Azure Databricks configuration profile
+      #   run: |
+      #     echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
+      #     echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
+      #     echo "azure_tenant_id     = ${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}" >> ~/.databrickscfg
+      #     echo "azure_client_id     = ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}" >> ~/.databrickscfg
+      #     echo "azure_client_secret = ${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}" >> ~/.databrickscfg
+      #     cat ~/.databrickscfg
+
+      - name: Generate and save AAD Token
         run: |
-          echo "[${{ env.DATABRICKS_PROFILE }}]" > ~/.databrickscfg
-          echo "host                = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
-          echo "azure_tenant_id     = ${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}" >> ~/.databrickscfg
-          echo "azure_client_id     = ${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}" >> ~/.databrickscfg
-          echo "azure_client_secret = ${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}" >> ~/.databrickscfg
-          cat ~/.databrickscfg
+          echo "DATABRICKS_TOKEN=$(curl -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
+            https://login.microsoftonline.com/${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}/oauth2/v2.0/token \
+            -d 'client_id=${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}' \
+            -d 'grant_type=client_credentials' \
+            -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
+            -d 'client_secret=${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}' |  jq -r  '.access_token')" >> $GITHUB_ENV
 
       - name: Set environment variables
         run: |
@@ -301,29 +295,53 @@ jobs:
             ;;
           esac
 
+      # - name: Delete files from the destination
+      #   run: |
+      #     for path in $(echo '${{ env.WORKSPACE_PATH }}' | jq -c '.[]'); do
+      #       SOURCE_PATH=$(echo "$path" | jq -r '.key')
+      #       DEST_PATH=$(echo "$path" | jq -r '.value')
+      #       echo "Creating directory in workspace path ${DEST_PATH}..."
+      #       databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace mkdirs ${DEST_PATH}
+      #       echo "Listing files in workspace path ${DEST_PATH}..."
+      #       databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list ${DEST_PATH}
+      #       if [[ ${SOURCE_PATH} != *"_test" ]]; then
+      #         echo "Deleting files in workspace path ${DEST_PATH}..."
+      #         databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace delete ${DEST_PATH} --recursive
+      #       fi
+      #       echo -e "\n"
+      #     done
+
+      # - name: Validate the bundle configuration files
+      #   run: |
+      #     databricks --profile ${{ env.DATABRICKS_PROFILE }} bundle validate
+
+      # - name: Deploy the bundle
+      #   run: |
+      #     databricks --profile ${{ env.DATABRICKS_PROFILE }} bundle deploy
+
       - name: Delete files from the destination
         run: |
           for path in $(echo '${{ env.WORKSPACE_PATH }}' | jq -c '.[]'); do
             SOURCE_PATH=$(echo "$path" | jq -r '.key')
             DEST_PATH=$(echo "$path" | jq -r '.value')
             echo "Creating directory in workspace path ${DEST_PATH}..."
-            databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace mkdirs ${DEST_PATH}
+            databricks workspace mkdirs ${DEST_PATH}
             echo "Listing files in workspace path ${DEST_PATH}..."
-            databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list ${DEST_PATH}
+            databricks workspace list ${DEST_PATH}
             if [[ ${SOURCE_PATH} != *"_test" ]]; then
               echo "Deleting files in workspace path ${DEST_PATH}..."
-              databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace delete ${DEST_PATH} --recursive
+              databricks workspace delete ${DEST_PATH} --recursive
             fi
             echo -e "\n"
           done
 
       - name: Validate the bundle configuration files
         run: |
-          databricks --profile ${{ env.DATABRICKS_PROFILE }} bundle validate
+          databricks bundle validate
 
       - name: Deploy the bundle
         run: |
-          databricks --profile ${{ env.DATABRICKS_PROFILE }} bundle deploy
+          databricks bundle deploy
 
       - name: Set job outputs
         id: op1
