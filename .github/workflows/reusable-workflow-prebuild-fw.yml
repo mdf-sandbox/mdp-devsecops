@@ -92,6 +92,16 @@ jobs:
           ref: main
           fetch-depth: 0
 
+      - name: Azure login
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AR_DEVOPS_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
+          allow-no-subscriptions: true
+
+      - name: Retrive Secrets from Azure Key Vault
+        run: |
+          echo "AZURE_DEVOPS_TOKEN_KV_VAL=$(az keyvault secret show --name '${{ env.AZURE_DEVOPS_TOKEN_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+
       - name: Create a work item on Azure Boards
         uses: ./custom-actions/azure-devops-boards/create-work-item
         id: work-item
@@ -107,7 +117,7 @@ jobs:
           pr_created_by: ${{ github.event.pull_request.user.login }}
           pr_created_at: ${{ github.event.pull_request.created_at }}
           package_name: ${{ needs.prebuild.outputs.package_name }}
-          token: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO ${{ secrets.AZURE_DEVOPS_TOKEN }}
+          token: ${{ env.AZURE_DEVOPS_TOKEN_KV_VAL }}
 
       - name: Update Pull request title
         uses: ./custom-actions/github/update-pr-title
