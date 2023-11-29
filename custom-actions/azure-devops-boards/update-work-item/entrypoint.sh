@@ -16,12 +16,14 @@ echo ${INPUT_RUN_PAGE_URL}
 if [[ ${INPUT_PR_STATE} != '' ]]; then
   COMMENT="${INPUT_PR_MERGED_BY} merged this pull request at ${INPUT_PR_MERGED_AT}"
 else
+  if [[ ${INPUT_RUN_RESULT_STATE} != '' ]]; then
     COMMENT="<div>Execute Approval Gate Check for Run ID: ${INPUT_RUN_ID}</div><div><br></div>
 <div><font size="1px">{<br>
   &nbsp;&nbsp;\"result_state\": \"<b>${INPUT_RUN_RESULT_STATE}</b>\",<br>
   &nbsp;&nbsp;\"notebook_path\": \"<b>${INPUT_RUN_NOTEBOOK_PATH}</b>\",<br>
   &nbsp;&nbsp;\"run_page_url\": \"<b><a href=\\\"${INPUT_RUN_PAGE_URL}\\\">${INPUT_RUN_PAGE_URL}</a></b>\"<br>
 }</font></div>"
+  fi
 fi
 
 
