@@ -171,6 +171,9 @@ jobs:
 
           [ $(ls ${{ env.DDL_VIEW_INIT }} | wc -l) -eq $(databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.DDL_VIEW_INIT }} | sed 1d | wc -l) ] && echo "${{ env.DDL_VIEW_INIT }} matched!" || { echo "::error:: ${{ env.DDL_VIEW_INIT }} not matched!"; exit 1; }
           
+          [ $(ls ${{ env.VOL_CONFIG }} | sed 1d | wc -l) -eq $(($(azcopy list "https://pocadlsmdf.dfs.core.windows.net/artifact/mdf/ingestion/test_deployment/${{ env.VOL_CONFIG }}" --running-tally | grep 'File count:' | awk '{print $4}') -1)) ] && echo "${{ env.VOL_CONFIG }} matched!" || { echo "::error:: ${{ env.VOL_CONFIG }} not matched!"; exit 1; }
+          [ $(ls ${{ env.VOL_MAPPING }} | wc -l) -eq $(($(azcopy list "https://pocadlsmdf.dfs.core.windows.net/artifact/mdf/ingestion/test_deployment/${{ env.VOL_MAPPING }}" --running-tally | grep 'File count:' | awk '{print $4}') -1)) ] && echo "${{ env.VOL_MAPPING }} matched!" || { echo "::error:: ${{ env.VOL_MAPPING }} not matched!"; exit 1; }
+
           ls ${{ env.DDL_DB_INIT_PERSIST }} | wc -l
           databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.DDL_DB_INIT_PERSIST }} | sed 1d | wc -l
           ls ${{ env.DDL_DB_INIT_RAW }} | wc -l
@@ -181,8 +184,8 @@ jobs:
           databricks --profile ${{ env.DATABRICKS_PROFILE }} workspace list /${{ env.DDL_TABLE_INIT_RAW }} | sed 1d | wc -l
           ls ${{ env.VOL_CONFIG }} | wc -l
           ls ${{ env.VOL_MAPPING }} | wc -l
-          [ $(ls ${{ env.VOL_CONFIG }} | sed 1d | wc -l) -eq $(($(azcopy list "https://pocadlsmdf.dfs.core.windows.net/artifact/mdf/ingestion/test_deployment/${{ env.VOL_CONFIG }}" --running-tally | grep 'File count:' | awk '{print $4}') -1)) ] && echo "${{ env.VOL_CONFIG }} matched!" || { echo "::error:: ${{ env.VOL_CONFIG }} not matched!"; exit 1; }
-          [ $(ls ${{ env.VOL_MAPPING }} | wc -l) -eq $(($(azcopy list "https://pocadlsmdf.dfs.core.windows.net/artifact/mdf/ingestion/test_deployment/${{ env.VOL_MAPPING }}" --running-tally | grep 'File count:' | awk '{print $4}') -1)) ] && echo "${{ env.VOL_MAPPING }} matched!" || { echo "::error:: ${{ env.VOL_MAPPING }} not matched!"; exit 1; }
+          $(($(azcopy list "https://pocadlsmdf.dfs.core.windows.net/artifact/mdf/ingestion/test_deployment/${{ env.VOL_CONFIG }}" --running-tally | grep 'File count:' | awk '{print $4}') -1))
+          $(($(azcopy list "https://pocadlsmdf.dfs.core.windows.net/artifact/mdf/ingestion/test_deployment/${{ env.VOL_MAPPING }}" --running-tally | grep 'File count:' | awk '{print $4}') -1))
 
 
 
