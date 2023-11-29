@@ -97,21 +97,23 @@ jobs:
 
       - name: Set environment variables
         if: ${{ inputs.run_id != '' }}
-        env:
-          WORKSPACE_PATH: $(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.workspace | to_entries')
+        run: |
+          echo "WORKSPACE_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.workspace | to_entries')" >> $GITHUB_ENV
+
+      - name: Override APPROVAL_GATE variables
         run: |
           case ${{ inputs.environment }} in
             "sit")
               echo "APPROVAL_GATE_ENVIRONMENT=dev" >> $GITHUB_ENV
-              echo "APPROVAL_GATE_PATH=$(echo '${WORKSPACE_PATH}' | jq -r '.[] | select (.key | contains("unit_test")) | .value')" >> $GITHUB_ENV
+              echo "APPROVAL_GATE_PATH=$(echo ${{ env.WORKSPACE_PATH }} | jq -r '.[] | select (.key | contains("unit_test")) | .value')" >> $GITHUB_ENV
             ;;
             "uat")
               echo "APPROVAL_GATE_ENVIRONMENT=sit" >> $GITHUB_ENV
-              echo "APPROVAL_GATE_PATH=$(echo '${WORKSPACE_PATH}' | jq -r '.[] | select (.key | contains("sit_test")) | .value')" >> $GITHUB_ENV
+              echo "APPROVAL_GATE_PATH=$(echo ${{ env.WORKSPACE_PATH }} | jq -r '.[] | select (.key | contains("sit_test")) | .value')" >> $GITHUB_ENV
             ;;
             "prod")
               echo "APPROVAL_GATE_ENVIRONMENT=uat" >> $GITHUB_ENV
-              echo "APPROVAL_GATE_PATH=$(echo '${WORKSPACE_PATH}' | jq -r '.[] | select (.key | contains("uat_test")) | .value')" >> $GITHUB_ENV
+              echo "APPROVAL_GATE_PATH=$(echo ${{ env.WORKSPACE_PATH }} | jq -r '.[] | select (.key | contains("uat_test")) | .value')" >> $GITHUB_ENV
             ;;
           esac
 
