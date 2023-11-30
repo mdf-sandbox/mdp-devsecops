@@ -290,6 +290,9 @@ jobs:
             if [[ ${SOURCE_PATH} != *"_test" ]]; then
               echo "Deleting files in workspace path ${DEST_PATH}..."
               databricks workspace delete ${DEST_PATH} --recursive
+            else
+              echo "Creating directory in workspace path ${DEST_PATH}..."
+              databricks workspace mkdirs ${DEST_PATH}/${{ inputs.baseline_no }}
             fi
             echo -e "\n"
           done
