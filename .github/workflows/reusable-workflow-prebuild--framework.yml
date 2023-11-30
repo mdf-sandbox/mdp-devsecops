@@ -58,7 +58,7 @@ jobs:
       - name: Run tests and Check coverage of tests
         run: |
           echo "Launching tests"
-          poetry run pytest --cov=src/framework tests/unit --cov-config=tests/unit/.coveragerc --cov-fail-under=60
+          poetry run pytest --cov=src/framework test/unit --cov-config=test/unit/.coveragerc --cov-fail-under=60
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2
