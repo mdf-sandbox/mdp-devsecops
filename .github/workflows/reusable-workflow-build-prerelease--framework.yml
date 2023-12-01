@@ -1,0 +1,145 @@
+name: reusable-workflow-build-prerelease--framework
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        type: string
+        description: Repository name
+        required: true
+      ref:
+        type: string
+        required: true
+      bump_version_mode:
+        type: string
+        required: true
+      publish_artifact_package:
+        type: string
+        required: true
+
+# Use the Bash shell as default settings for all jobs in the workflow
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build-prerelease:
+    name: Build Pre-Release
+    runs-on: ubuntu-20.04
+    if: ${{ (inputs.ref == 'main') || (startsWith(inputs.ref, 'release/')) }}
+
+    steps:
+      - name: Checkout main branch of DevSecOps repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.GHE_DEVOPS_REPOSITORY_VAR }}
+          ref: main
+          fetch-depth: 0
+
+      - name: Load environment variables from dev dotenv file
+        run: |
+          cat ./dotenv/dev.env >> $GITHUB_ENV
+
+      - name: Checkout ${{ inputs.ref }} branch of ${{ inputs.repository }} repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ vars.PYTHON_VERSION_VAR }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ vars.POETRY_VERSION_VAR }}
+
+      - name: Install pip and etc
+        run: |
+          pip install --upgrade pip
+          pip install twine
+
+      - name: Install Databricks CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+      - name: Azure login
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ secrets.AR_DEVOPS_CLIENT_ID }}","clientSecret":"${{ secrets.AR_DEVOPS_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AR_DEVOPS_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AR_DEVOPS_TENANT_ID }}"}'
+          allow-no-subscriptions: true
+
+      - name: Retrive Secrets from Azure Key Vault
+        run: |
+          echo "AR_FRMWK_CLIENT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_CLIENT_SECRET_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_SECRET_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+
+      - name: Generate Databricks access token using OAuth2
+        run: |
+          echo "DATABRICKS_TOKEN=$(curl -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
+            https://login.microsoftonline.com/${{ env.AR_FRMWK_TENANT_ID_KV_VAL }}/oauth2/v2.0/token \
+            -d 'client_id=${{ env.AR_FRMWK_CLIENT_ID_KV_VAL }}' \
+            -d 'grant_type=client_credentials' \
+            -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
+            -d 'client_secret=${{ env.AR_FRMWK_CLIENT_SECRET_KV_VAL }}' |  jq -r  '.access_token')" >> $GITHUB_ENV
+
+      - name: Set environment variables
+        run: |
+          echo "PACKAGE_NAME=$(echo ${{ inputs.repository }} | awk -F'/' '{print $2}')" >> $GITHUB_ENV
+          echo "CURRENT_VERSION=$(poetry version --dry-run -s)" >> $GITHUB_ENV
+          echo "PRERELEASE_VERSION=$(poetry version ${{ inputs.ref == 'main' && inputs.bump_version_mode || 'prerelease' }} --dry-run -s)" >> $GITHUB_ENV
+          echo "RELEASE_VERSION=$(poetry version ${{ inputs.bump_version_mode == 'premajor' && 'major' || 'minor' }} --dry-run -s)" >> $GITHUB_ENV
+          echo "DATABRICKS_VOLUMES_ARTIFACT_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.volumes_artifact | to_entries')" >> $GITHUB_ENV
+
+      - name: Bump package version to ${{ env.PRERELEASE_VERSION }}
+        run: |
+          poetry self add poetry-bumpversion
+          poetry version ${{ env.PRERELEASE_VERSION }}
+
+      - name: Build wheel package
+        run: |
+          poetry build -f wheel
+
+      - name: Upload package to Databricks Volumes
+        if: ${{ inputs.publish_artifact_package == 'N' }}
+        run: |
+          for path in $(echo '${{ env.DATABRICKS_VOLUMES_ARTIFACT_PATH }}' | jq -c '.[]'); do
+            SOURCE_PATH=$(echo "$path" | jq -r '.key')
+            DEST_PATH=$(echo "$path" | jq -r '.value')
+            if [[ ${SOURCE_PATH} == "package" ]]; then
+              echo "Uploading package to volume path ${{ env.DATABRICKS_VOLUMES_ARTIFACT_PARENT_PATH }}${DEST_PATH}..."
+              databricks fs cp ./dist/* dbfs:${{ env.DATABRICKS_VOLUMES_ARTIFACT_PARENT_PATH }}${DEST_PATH} --recursive --overwrite
+            echo -e "\n"
+          done
+
+      - name: Publish package to Azure Artifact
+        if: ${{ inputs.publish_artifact_package == 'Y' }}
+        run: |
+          poetry run twine upload dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO: ${{ secrets.AZURE_DEVOPS_TOKEN }}
+          TWINE_REPOSITORY_URL: ${{ env.AZURE_DEVOPS_ARTIFACT_UPLOAD_URL }}
+
+      - name: Setup global Git configs
+        run: |
+          git config --global user.name "${{ vars.GHE_DEVOPS_USERNAME_VAR }}"
+          git config --global user.email "${{ vars.GHE_DEVOPS_EMAIL_VAR }}"
+
+      - name: Initial pre-release version on release branch
+        if: ${{ inputs.ref == 'main' }}
+        run: |
+          git checkout -b "release/v${{ env.RELEASE_VERSION }}"
+          git commit -am "Initial ${{ inputs.bump_version_mode }} version from ${{ env.CURRENT_VERSION }} to ${{ env.PRERELEASE_VERSION }}"
+          git push -u origin "release/v${{ env.RELEASE_VERSION }}"
+
+      - name: Update pre-release version on release branch
+        if: ${{ startsWith(inputs.ref, 'release/') }}
+        run: |
+          git commit -am "Update pre-release version from ${{ env.CURRENT_VERSION }} to ${{ env.PRERELEASE_VERSION }}"
+          git push -u origin ${{ inputs.ref }}

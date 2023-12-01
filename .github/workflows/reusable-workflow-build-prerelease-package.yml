@@ -70,7 +70,7 @@ jobs:
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.AZURE_DEVOPS_PAT }}
-          TWINE_REPOSITORY_URL: https://pkgs.dev.azure.com/kBank-MDF-SANDBOX/_packaging/kBank-MDF-SANDBOX/pypi/upload #TODO: ${{ secrets.AZURE_DEVOPS_ARTIFACT_UPLOAD_URL }}
+          TWINE_REPOSITORY_URL: https://pkgs.dev.azure.com/kBank-MDF-SANDBOX/_packaging/kBank-MDF-SANDBOX/pypi/upload #TODO: ${{ env.AZURE_DEVOPS_ARTIFACT_UPLOAD_URL }}
 
       - name: Setup global Git configs
         run: |
