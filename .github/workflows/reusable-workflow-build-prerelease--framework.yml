@@ -102,11 +102,7 @@ jobs:
         run: |
           poetry self add poetry-bumpversion
           if [[ ${{ inputs.publish_artifact_package }} == 'N' ]]; then
-            if [[ ${{ inputs.ref }} == 'main' ]]; then
               poetry version ${{ env.PRERELEASE_VERSION }}
-            else
-              poetry version ${{ env.CURRENT_VERSION }}
-            fi
           else
             if [[ ${{ inputs.ref }} == 'main' ]]; then
               poetry version ${{ env.PRERELEASE_VERSION }}
