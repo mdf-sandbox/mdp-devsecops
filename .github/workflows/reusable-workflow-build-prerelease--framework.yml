@@ -23,18 +23,26 @@ defaults:
     shell: bash
 
 jobs:
-  build-prerelease:
-    name: Build Pre-Release
+
+  validate-inputs:
+    name: Valiadate Inputs
     runs-on: ubuntu-20.04
     if: ${{ (inputs.ref == 'main') || (startsWith(inputs.ref, 'release/')) }}
 
     steps:
-      - name: Valiadate GitHub Action inputs
+      - name: Validate build package from release branch to Databricks Volumes
         if: ${{ (startsWith(inputs.ref, 'release/')) && (inputs.publish_artifact_package == 'N') }}
         run: |
-          echo "::error::Invalid input was found"
+          echo "::error ::Invalid input"
           exit 1
 
+  build-prerelease:
+    name: Build Pre-Release
+    runs-on: ubuntu-20.04
+    if: ${{ (inputs.ref == 'main') || (startsWith(inputs.ref, 'release/')) }}
+    needs: [validate-inputs]
+
+    steps:
       - name: Checkout main branch of DevSecOps repository
         uses: actions/checkout@v4
         with:
