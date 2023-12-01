@@ -29,6 +29,12 @@ jobs:
     if: ${{ (inputs.ref == 'main') || (startsWith(inputs.ref, 'release/')) }}
 
     steps:
+      - name: Valiadate GitHub Action inputs
+        if: ${{ (startsWith(inputs.ref, 'release/') && (inputs.publish_artifact_package == 'N') }}
+        run: |
+          echo "::error::Invalid input was found"
+          exit 1
+
       - name: Checkout main branch of DevSecOps repository
         uses: actions/checkout@v4
         with:
