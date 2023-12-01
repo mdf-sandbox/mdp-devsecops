@@ -37,7 +37,7 @@ jobs:
         env:
           repository: ${{ inputs.repository }}
         run: |
-          echo "SUBJECT_AREA=$(echo ${repository//-/_} | awk -F __ '{print $3}')" >> $GITHUB_ENV
+          echo "SUBJECT_AREA=$(echo ${repository//-/_} | awk -F / '{print $2}' | awk -F __ '{print $3}')" >> $GITHUB_ENV
 
       - name: Set up Python
         uses: actions/setup-python@v4
