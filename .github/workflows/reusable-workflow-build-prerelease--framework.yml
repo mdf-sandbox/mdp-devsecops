@@ -114,6 +114,7 @@ jobs:
             if [[ ${SOURCE_PATH} == "fw_test" ]]; then
               echo "Uploading package to volume path ${{ env.DATABRICKS_VOLUMES_ARTIFACT_PARENT_PATH }}${DEST_PATH}..."
               databricks fs cp ./dist/* dbfs:${{ env.DATABRICKS_VOLUMES_ARTIFACT_PARENT_PATH }}${DEST_PATH} --recursive --overwrite
+            fi
             echo -e "\n"
           done
 
