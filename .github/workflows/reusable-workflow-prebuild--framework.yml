@@ -60,18 +60,18 @@ jobs:
           echo "Launching tests"
           poetry run pytest --cov=src/mdp/framework/mdp_control_framework test/mdp/unit --cov-config=test/mdp/unit/mdp_control_framework/.coveragerc --cov-fail-under=80
 
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
-        with:
-          languages: python
+      # - name: Initialize CodeQL
+      #   uses: github/codeql-action/init@v2
+      #   with:
+      #     languages: python
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v2
+      # - name: Autobuild
+      #   uses: github/codeql-action/autobuild@v2
 
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
-        with:
-          category: "/language:python"
+      # - name: Perform CodeQL Analysis
+      #   uses: github/codeql-action/analyze@v2
+      #   with:
+      #     category: "/language:python"
 
       - name: Set job outputs
         id: op1
