@@ -33,6 +33,12 @@ jobs:
           ref: ${{ inputs.ref }}
           fetch-depth: 0
 
+      - name: Set environment variables
+        env:
+          repository: ${{ inputs.repository }}
+        run: |
+          echo "SUBJECT_AREA=$(echo ${repository//-/_} | awk -F __ '{print $3}')" >> $GITHUB_ENV
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -58,7 +64,7 @@ jobs:
       - name: Run tests and check coverage of tests
         run: |
           echo "Launching tests"
-          poetry run pytest --cov=src/mdp/framework/mdp_control_framework test/mdp/unit --cov-config=test/mdp/unit/mdp_control_framework/.coveragerc --cov-fail-under=80
+          poetry run pytest --cov=src/mdp/framework/${{ env.SUBJECT_AREA }} test/mdp/unit --cov-config=test/mdp/unit/${{ env.SUBJECT_AREA }}/.coveragerc --cov-fail-under=80
 
       # - name: Initialize CodeQL
       #   uses: github/codeql-action/init@v2
