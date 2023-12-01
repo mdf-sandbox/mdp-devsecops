@@ -98,21 +98,20 @@ jobs:
           echo "RELEASE_VERSION=$(poetry version ${{ inputs.bump_version_mode == 'premajor' && 'major' || 'minor' }} --dry-run -s)" >> $GITHUB_ENV
           echo "DATABRICKS_VOLUMES_ARTIFACT_PATH=$(yq '.file_location_config' ./deployment/service/databricks/config.yml | jq -c '.volumes_artifact | to_entries')" >> $GITHUB_ENV
 
-      # - name: Bump package version to ${{ env.PRERELEASE_VERSION }}
-      #   run: |
-      #     poetry self add poetry-bumpversion
-      #     poetry version ${{ env.PRERELEASE_VERSION }}
-
       - name: Bump package version to ${{ env.PRERELEASE_VERSION }}
         run: |
           poetry self add poetry-bumpversion
           if [[ ${{ inputs.publish_artifact_package }} == 'N' ]]; then
-            poetry version ${{ env.RELEASE_VERSION }}a0
+            if [[ ${{ inputs.ref }} == 'main' ]]; then
+              poetry version ${{ env.PRERELEASE_VERSION }}
+            else
+              poetry version ${{ env.CURRENT_VERSION }}
+            fi
           else
-            poetry version ${{ env.PRERELEASE_VERSION }}
             if [[ ${{ inputs.ref }} == 'main' ]]; then
               poetry version ${{ env.PRERELEASE_VERSION }}
             fi
+            poetry version ${{ env.PRERELEASE_VERSION }}
           fi
 
       - name: Build wheel package
