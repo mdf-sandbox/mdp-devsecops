@@ -36,7 +36,7 @@ jobs:
       - name: Publishing package must be 'Y' if bumping pre-release version from release branch
         if: ${{ (startsWith(inputs.ref, 'release/')) && (inputs.publish_artifact_package == 'N') }}
         run: |
-          echo "::error Publishing package must be 'Y' if bumping pre-release version from release branch::Invalid input"
+          echo "::error ref='release/**', publish_artifact_package='N'::Invalid inputs"
           exit 1
 
   build-prerelease:
