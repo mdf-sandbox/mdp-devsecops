@@ -9,12 +9,15 @@ on:
         required: true
       ref:
         type: string
+        description: Bumping pre-release version from branch (main or release/**)
         required: true
       bump_version_mode:
         type: string
+        description: Bumping pre-release version to
         required: true
       publish_artifact_package:
         type: string
+        description: Publishing package to Azure Devops Artifacts
         required: true
 
 # Use the Bash shell as default settings for all jobs in the workflow
@@ -24,23 +27,23 @@ defaults:
 
 jobs:
 
-  validate-inputs:
-    name: Valiadate Inputs
+  validate-action-inputs:
+    name: Validate Action Inputs
     runs-on: ubuntu-20.04
     if: ${{ (inputs.ref == 'main') || (startsWith(inputs.ref, 'release/')) }}
 
     steps:
-      - name: Validate build package from release branch to Databricks Volumes
+      - name: Publishing package must be 'Y' if bumping pre-release version from release branch
         if: ${{ (startsWith(inputs.ref, 'release/')) && (inputs.publish_artifact_package == 'N') }}
         run: |
-          echo "::error ::Invalid input"
+          echo "::error Publishing package must be 'Y' if bumping pre-release version from release branch::Invalid input"
           exit 1
 
   build-prerelease:
     name: Build Pre-Release
     runs-on: ubuntu-20.04
     if: ${{ (inputs.ref == 'main') || (startsWith(inputs.ref, 'release/')) }}
-    needs: [validate-inputs]
+    needs: [validate-action-inputs]
 
     steps:
       - name: Checkout main branch of DevSecOps repository
@@ -94,6 +97,7 @@ jobs:
           echo "AR_FRMWK_CLIENT_SECRET_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_CLIENT_SECRET_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
           echo "AR_FRMWK_SUBSCRIPTION_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_DEVOPS_SUBSCRIPTION_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
           echo "AR_FRMWK_TENANT_ID_KV_VAL=$(az keyvault secret show --name '${{ env.AR_FRMWK_TENANT_ID_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
+          echo "AZURE_DEVOPS_TOKEN_KV_VAL=$(az keyvault secret show --name '${{ env.AZURE_DEVOPS_TOKEN_KV }}' --vault-name '${{ env.AZURE_KEYVAULT_NAME }}' --query 'value' | jq -r)" >> $GITHUB_ENV
 
       - name: Generate Databricks access token using OAuth2
         run: |
@@ -140,7 +144,7 @@ jobs:
           poetry run twine upload dist/*
         env:
           TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.AZURE_DEVOPS_PAT }} #TODO: ${{ secrets.AZURE_DEVOPS_TOKEN }}
+          TWINE_PASSWORD: ${{ env.AZURE_DEVOPS_TOKEN_KV_VAL }}
           TWINE_REPOSITORY_URL: ${{ env.AZURE_DEVOPS_ARTIFACT_UPLOAD_URL }}
 
       - name: Setup global Git configs
